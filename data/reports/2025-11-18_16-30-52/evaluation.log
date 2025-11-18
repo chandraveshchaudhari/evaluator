@@ -1,0 +1,32 @@
+Evaluating notebook: student_assignment_partial_incorrect.ipynb
+Notebook: student_assignment_partial_incorrect.ipynb | Name: student name partial | Roll: student roll number partial | Marks: 0/20 | Error: An error occurred while executing the following cell:
+------------------
+assert question_one([1,2,2,3]) == 6
+assert question_one([]) == 0
+------------------
+
+
+[31m---------------------------------------------------------------------------[39m
+[31mAssertionError[39m                            Traceback (most recent call last)
+[36mCell[39m[36m [39m[32mIn[8][39m[32m, line 1[39m
+[32m----> [39m[32m1[39m [38;5;28;01massert[39;00m question_one([[32m1[39m,[32m2[39m,[32m2[39m,[32m3[39m]) == [32m6[39m
+[32m      2[39m [38;5;28;01massert[39;00m question_one([]) == [32m0[39m
+
+[31mAssertionError[39m: 
+
+Evaluating notebook: student_answer_sheet.ipynb
+Notebook: student_answer_sheet.ipynb | Name: student name | Roll: student roll number | Marks: 0/20 | Error: An error occurred while executing the following cell:
+------------------
+assert question_one([1,2,2,3]) == 6
+assert question_one([]) == 0
+------------------
+
+
+[31m---------------------------------------------------------------------------[39m
+[31mAssertionError[39m                            Traceback (most recent call last)
+[36mCell[39m[36m [39m[32mIn[23][39m[32m, line 1[39m
+[32m----> [39m[32m1[39m [38;5;28;01massert[39;00m question_one([[32m1[39m,[32m2[39m,[32m2[39m,[32m3[39m]) == [32m6[39m
+[32m      2[39m [38;5;28;01massert[39;00m question_one([]) == [32m0[39m
+
+[31mAssertionError[39m: 
+

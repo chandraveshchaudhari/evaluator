@@ -1,0 +1,31 @@
+filename,path,ext,name,roll_number,ok,error,duration,marks,test_results
+student_assignment_partial_incorrect.ipynb,data/submissions/student_assignment_partial_incorrect.ipynb,ipynb,student name partial,student roll number partial,False,"An error occurred while executing the following cell:
+------------------
+assert question_one([1,2,2,3]) == 6
+assert question_one([]) == 0
+------------------
+
+
+[31m---------------------------------------------------------------------------[39m
+[31mAssertionError[39m                            Traceback (most recent call last)
+[36mCell[39m[36m [39m[32mIn[8][39m[32m, line 1[39m
+[32m----> [39m[32m1[39m [38;5;28;01massert[39;00m question_one([[32m1[39m,[32m2[39m,[32m2[39m,[32m3[39m]) == [32m6[39m
+[32m      2[39m [38;5;28;01massert[39;00m question_one([]) == [32m0[39m
+
+[31mAssertionError[39m: 
+",0.918,0,"[{'test_index': 1, 'passed': False, 'error': 'An error occurred while executing the following cell:\n------------------\nassert question_one([1,2,2,3]) == 6\nassert question_one([]) == 0\n------------------\n\n\n\x1b[31m---------------------------------------------------------------------------\x1b[39m\n\x1b[31mAssertionError\x1b[39m                            Traceback (most recent call last)\n\x1b[36mCell\x1b[39m\x1b[36m \x1b[39m\x1b[32mIn[8]\x1b[39m\x1b[32m, line 1\x1b[39m\n\x1b[32m----> \x1b[39m\x1b[32m1\x1b[39m \x1b[38;5;28;01massert\x1b[39;00m question_one([\x1b[32m1\x1b[39m,\x1b[32m2\x1b[39m,\x1b[32m2\x1b[39m,\x1b[32m3\x1b[39m]) == \x1b[32m6\x1b[39m\n\x1b[32m      2\x1b[39m \x1b[38;5;28;01massert\x1b[39;00m question_one([]) == \x1b[32m0\x1b[39m\n\n\x1b[31mAssertionError\x1b[39m: \n'}, {'test_index': 2, 'passed': False, 'error': None}, {'test_index': 3, 'passed': False, 'error': None}, {'test_index': 4, 'passed': False, 'error': None}, {'test_index': 5, 'passed': False, 'error': None}, {'test_index': 6, 'passed': False, 'error': None}, {'test_index': 7, 'passed': False, 'error': None}, {'test_index': 8, 'passed': False, 'error': None}, {'test_index': 9, 'passed': False, 'error': None}, {'test_index': 10, 'passed': False, 'error': None}, {'test_index': 11, 'passed': False, 'error': None}, {'test_index': 12, 'passed': False, 'error': None}, {'test_index': 13, 'passed': False, 'error': None}, {'test_index': 14, 'passed': False, 'error': None}, {'test_index': 15, 'passed': False, 'error': None}, {'test_index': 16, 'passed': False, 'error': None}, {'test_index': 17, 'passed': False, 'error': None}, {'test_index': 18, 'passed': False, 'error': None}, {'test_index': 19, 'passed': False, 'error': None}, {'test_index': 20, 'passed': False, 'error': None}]"
+student_answer_sheet.ipynb,data/submissions/student_answer_sheet.ipynb,ipynb,student name,student roll number,False,"An error occurred while executing the following cell:
+------------------
+assert question_one([1,2,2,3]) == 6
+assert question_one([]) == 0
+------------------
+
+
+[31m---------------------------------------------------------------------------[39m
+[31mAssertionError[39m                            Traceback (most recent call last)
+[36mCell[39m[36m [39m[32mIn[23][39m[32m, line 1[39m
+[32m----> [39m[32m1[39m [38;5;28;01massert[39;00m question_one([[32m1[39m,[32m2[39m,[32m2[39m,[32m3[39m]) == [32m6[39m
+[32m      2[39m [38;5;28;01massert[39;00m question_one([]) == [32m0[39m
+
+[31mAssertionError[39m: 
+",0.778,0,"[{'test_index': 1, 'passed': False, 'error': 'An error occurred while executing the following cell:\n------------------\nassert question_one([1,2,2,3]) == 6\nassert question_one([]) == 0\n------------------\n\n\n\x1b[31m---------------------------------------------------------------------------\x1b[39m\n\x1b[31mAssertionError\x1b[39m                            Traceback (most recent call last)\n\x1b[36mCell\x1b[39m\x1b[36m \x1b[39m\x1b[32mIn[23]\x1b[39m\x1b[32m, line 1\x1b[39m\n\x1b[32m----> \x1b[39m\x1b[32m1\x1b[39m \x1b[38;5;28;01massert\x1b[39;00m question_one([\x1b[32m1\x1b[39m,\x1b[32m2\x1b[39m,\x1b[32m2\x1b[39m,\x1b[32m3\x1b[39m]) == \x1b[32m6\x1b[39m\n\x1b[32m      2\x1b[39m \x1b[38;5;28;01massert\x1b[39;00m question_one([]) == \x1b[32m0\x1b[39m\n\n\x1b[31mAssertionError\x1b[39m: \n'}, {'test_index': 2, 'passed': False, 'error': None}, {'test_index': 3, 'passed': False, 'error': None}, {'test_index': 4, 'passed': False, 'error': None}, {'test_index': 5, 'passed': False, 'error': None}, {'test_index': 6, 'passed': False, 'error': None}, {'test_index': 7, 'passed': False, 'error': None}, {'test_index': 8, 'passed': False, 'error': None}, {'test_index': 9, 'passed': False, 'error': None}, {'test_index': 10, 'passed': False, 'error': None}, {'test_index': 11, 'passed': False, 'error': None}, {'test_index': 12, 'passed': False, 'error': None}, {'test_index': 13, 'passed': False, 'error': None}, {'test_index': 14, 'passed': False, 'error': None}, {'test_index': 15, 'passed': False, 'error': None}, {'test_index': 16, 'passed': False, 'error': None}, {'test_index': 17, 'passed': False, 'error': None}, {'test_index': 18, 'passed': False, 'error': None}, {'test_index': 19, 'passed': False, 'error': None}, {'test_index': 20, 'passed': False, 'error': None}]"
