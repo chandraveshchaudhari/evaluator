@@ -3,3 +3,4 @@ pandas>=1.0.0
 xlwings>=0.24.0; extra == "xlwings"
 nbformat>=5.0.0
 nbclient>=0.5.0
+click>=7.0

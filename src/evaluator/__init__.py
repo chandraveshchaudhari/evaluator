@@ -11,6 +11,8 @@ from .execution import notebook_executor, sandbox_runner  # noqa: F401
 from .comparison import function_checker, notebook_compare, value_checker  # noqa: F401
 from .reporting import report_builder  # noqa: F401
 from .cli import main as cli  # noqa: F401
+from .evaluator import Evaluator
+
 
 __all__ = [
     "file_loader",
@@ -23,4 +25,5 @@ __all__ = [
     "notebook_compare",
     "report_builder",
     "cli",
+    "Evaluator",  
 ]
