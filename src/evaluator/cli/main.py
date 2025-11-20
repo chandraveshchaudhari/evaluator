@@ -42,8 +42,8 @@ def evaluate(solution, submissions, output):
 
     click.echo(f"Loading evaluator...")
     evaluator = Evaluator(
-        solution_file=str(solution),
-        submission_folder=str(submissions),
+        solution_file_path=str(solution),
+        submission_folder_path=str(submissions),
     )
 
     click.echo(f"Running evaluation...")

@@ -1,18 +1,26 @@
-"""Path helpers."""
-from __future__ import annotations
-import os
+"""
+Path utilities for file and folder operations.
+"""
 
+def list_files_paths(path):
+    """List files in the given path."""
+    if path.exists() and path.is_dir():
+        return [item for item in path.iterdir() if item.is_file()]
+    return []
 
-def ensure_dir(path: str) -> None:
-    """Ensure that a directory exists for the given path (create parents)."""
-    os.makedirs(path, exist_ok=True)
+def is_notebook(path):
+    """Check if the path is a notebook file."""
+    pass
 
-def get_all_excel_filenames(folder_path):
-    files = os.listdir(folder_path)
-    excel_files = []
-    for f in files:
-        if f.endswith('.xlsx'):
-            excel_files.append(f)
-    write_to_file(f"Found {len(excel_files)} excel files to evaluate. \n\n\n\n ")
-    return excel_files
+def is_excel(path):
+    """Check if the path is an Excel file."""
+    pass
+
+def sanitize_filename(name):
+    """Sanitize a filename for safe usage."""
+    pass
+
+def get_file_extension(path):
+    """Get the file extension of the given path."""
+    return path.suffix.lower() if hasattr(path, "suffix") else ""
 

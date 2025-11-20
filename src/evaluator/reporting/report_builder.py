@@ -1,22 +1,42 @@
 """
 Result dataclasses for standardized evaluator output.
 """
+import pandas as pd
+from pathlib import Path
 
-# result['Name'] = result['Name'].apply(lambda x: str(x).strip().title())
+class ReportBuilder:
 
-# new_df = result.sort_values(by='Formula Sum', ascending= False)
+    def __init__(self, df: pd.DataFrame):
+        self.df = df
 
-# # new_df.to_csv("Assignment_1 Metrics", index = False)
-# clean_df = new_df.drop_duplicates(subset=['Roll Number'])
+    def show(self):
+        """Return the DataFrame for immediate viewing."""
+        return self.df
 
-from typing import List
+    def to_csv(self, path):
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self.df.to_csv(path, index=False)
+        return path
 
+    def to_html(self, path):
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        html = self.df.to_html(index=False)
+        path.write_text(html, encoding="utf8")
+        return path
 
-class Results:
-    def __init__(self, comparison= None):
-        self.data = comparison if comparison else Compare().data
+    def to_log(self, path):
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(self.df.to_string(index=False), encoding="utf8")
+        return path
 
-    def report_data(self) -> List[dict]:
-        report = []
-        
-        return report
+    def summary(self):
+        """Return a high-level summary as dictionary."""
+        return {
+            "total_tests": len(self.df),
+            "passed": int(self.df["score"].sum()),
+            "failed": int((1 - self.df["score"]).sum()),
+            "percentage": float(self.df["percentage"].mean()),
+        }

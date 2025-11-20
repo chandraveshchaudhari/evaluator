@@ -1,75 +1,56 @@
-"""
-Builds student reports from evaluation results.
-"""
+
+import pandas as pd
 from evaluator.reporting.report_builder import ReportBuilder
 
+
 class ReportingService:
+    """
+    Service for building reports from comparison results.
+    """
     def build(self, comparison_results):
-        return ReportBuilder(comparison_results)
-
-
-
-
-import json
-import csv
-from pathlib import Path
-import pandas as pd
-from pathlib import Path
-from evaluator.reporting.results import Results
-
-class ReportBuilder:
-    def __init__(self, comparison_dict=None):
         """
-        comparison_dict is a list of dictionaries or a dict-of-dicts returned by comparison module.
+        Build a ReportBuilder object from comparison results.
+
+        comparison_results : list[dict]
+            Output from ComparisonService.run_assertions()
+
+        Returns
+        -------
+        ReportBuilder: 
+            Contains DataFrame + export methods
         """
-        self.data = comparison_dict if comparison_dict else Results().report_data()
 
-    # --- VIEWING ---
-    def show(self):
-        return pd.DataFrame(self.data)
+        # Convert list of dicts to a pandas DataFrame
+        df = pd.DataFrame(comparison_results)
 
-    # --- EXPORTS ---
-    def to_csv(self, path):
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self.df.to_csv(path, index=False)
-        return path
+        # Add useful summary columns
+        if "score" in df.columns:
+            df["max_score"] = 1
+            df["percentage"] = (df["score"] / df["max_score"]) * 100
 
-    def to_html(self, path):
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        html = self.df.to_html(index=False)
-        path.write_text(html, encoding="utf8")
-        return path
+        # Create ReportBuilder with this DataFrame
+        return ReportBuilder(df)
 
-    def to_log(self, path):
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w", encoding="utf8") as f:
-            f.write(self.df.to_string(index=False))
-        return path
+    def build(self, comparison_results):
+        """Build a report from comparison results."""
+        pass
 
+    def build_dataframe(self, results):
+        """Build a DataFrame from results."""
+        pass
 
+    def build_html(self, df, template):
+        """Build HTML report from DataFrame and template."""
+        pass
 
-# def build_json_report(result: Dict[str, Any], out_path: str) -> str:
-#     """Write result dict as JSON to out_path and return the path."""
-#     os.makedirs(os.path.dirname(out_path), exist_ok=True)
-#     with open(out_path, "w", encoding="utf8") as f:
-#         json.dump(result, f, indent=2, ensure_ascii=False)
-#     return out_path
+    def build_csv(self, df):
+        """Build CSV report from DataFrame."""
+        pass
 
+    def build_log(self, df):
+        """Build log report from DataFrame."""
+        pass
 
-# def build_csv_summary(rows: list[Dict[str, Any]], out_path: str) -> str:
-#     """Write a list of per-student summary rows (dicts) to a CSV file."""
-#     if not rows:
-#         raise ValueError("rows must not be empty")
-#     os.makedirs(os.path.dirname(out_path), exist_ok=True)
-#     fieldnames = list(rows[0].keys())
-#     with open(out_path, "w", newline="", encoding="utf8") as f:
-#         writer = csv.DictWriter(f, fieldnames=fieldnames)
-#         writer.writeheader()
-#         for r in rows:
-#             writer.writerow(r)
-#     return out_path
-
-# clean_df.to_csv(f"{assignment_number} Metrics.csv", index = False)
+    def generate_output_folder(self, base_path):
+        """Generate output folder for reports."""
+        pass
