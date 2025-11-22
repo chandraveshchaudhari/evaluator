@@ -6,7 +6,7 @@ from pathlib import Path
 from evaluator.ingestion.solution_ingestion import SolutionIngestion
 from evaluator.utils.path_utils import get_file_extension, list_files_paths
 from pathlib import Path
-from evaluator.utils.io_utils import load_notebook, load_excel, load_json, load_csv, load_raw_code
+from evaluator.utils.io_utils import load_notebook, load_excel, load_json, load_csv, load_raw_code, safe_load_notebook
 from evaluator.ingestion.validation import validate_extension
 from evaluator.utils.path_utils import is_notebook, is_excel
 
@@ -51,15 +51,13 @@ class IngestionService:
 
         # Detect file type automatically
         if is_notebook(path):
-            validate_extension(path, [".ipynb"])
             return {
                 "type": "notebook",
                 "path": path,
-                "notebook": load_notebook(path)
+                "notebook": safe_load_notebook(path)
             }
 
         if is_excel(path):
-            validate_extension(path, [".xlsx", ".xlsm"])
             return {
                 "type": "excel",
                 "path": path,
@@ -102,13 +100,10 @@ class IngestionService:
         if not solution_path.exists():
             raise FileNotFoundError(f"Solution file not found: {solution_path}")
 
-        if is_notebook(solution_path):
-            validate_extension(solution_path, [".ipynb"])
-            
+        if is_notebook(solution_path):            
             return SolutionIngestion(solution_path).understand_notebook_solution()
 
         if is_excel(solution_path):
-            validate_extension(solution_path, [".xlsx", ".xlsm"])
             pass
 
         if solution_path.suffix == ".py":

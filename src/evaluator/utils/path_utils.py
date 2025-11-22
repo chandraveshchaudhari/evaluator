@@ -10,15 +10,11 @@ def list_files_paths(path):
 
 def is_notebook(path):
     """Check if the path is a notebook file."""
-    pass
+    return get_file_extension(path) == ".ipynb"
 
 def is_excel(path):
     """Check if the path is an Excel file."""
-    pass
-
-def sanitize_filename(name):
-    """Sanitize a filename for safe usage."""
-    pass
+    return get_file_extension(path) in [".xlsx", ".xlsm"]
 
 def get_file_extension(path):
     """Get the file extension of the given path."""

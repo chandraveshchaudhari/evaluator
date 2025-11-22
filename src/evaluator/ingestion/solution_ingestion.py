@@ -3,21 +3,16 @@ Handles ingestion of instructor-provided solution notebooks or files.
 Extracts correct functions and test definitions.
 """
 
-from pathlib import Path
 
-
-class SolutionIngestion:
-    """
-    Reads instructor's notebook and prepares test specification.
-    """
-
-    def __init__(self, path: Path):
-        self.path = path
-
-    import ast
+import ast
 import nbformat
 from pathlib import Path
 from collections import defaultdict
+import nbformat
+from pathlib import Path
+
+from evaluator.utils.io_utils import safe_load_notebook
+
 
 class SolutionIngestion:
     """
@@ -26,6 +21,7 @@ class SolutionIngestion:
 
     def __init__(self, path: Path):
         self.path = Path(path)
+
 
     def understand_notebook_solution(self):
         """
@@ -47,9 +43,8 @@ class SolutionIngestion:
         """
         if not self.path.exists():
             raise FileNotFoundError(f"Solution notebook not found: {self.path}")
-
-        # Load notebook
-        notebook = nbformat.read(self.path, as_version=4)
+    
+        notebook = safe_load_notebook(self.path)
 
         metadata = {}
         question_asserts = defaultdict(lambda: {"tests": []})

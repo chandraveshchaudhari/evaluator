@@ -76,7 +76,7 @@ class Evaluator:
 
     def build_report(self, executed_results: Iterable[dict]) -> Any:
         """Delegate to the reporting service to build final outputs."""
-        return self.reporting.build(executed_results)
+        return ReportingService(executed_results)
 
     def save_all_reports(self, report_obj: Any, output_dir: str | Path) -> Path:
         """Save generated report(s) to disk and return the target folder.
