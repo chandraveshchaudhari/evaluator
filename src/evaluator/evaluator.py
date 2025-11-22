@@ -14,7 +14,6 @@ from typing import Iterable, List, Any
 
 from evaluator.ingestion.ingestion_service import IngestionService
 from evaluator.execution.execution_service import ExecutionService
-from evaluator.comparison.comparison_service import ComparisonService
 from evaluator.reporting.reporting_service import ReportingService
 
 
@@ -26,10 +25,6 @@ class Evaluator:
         self,
         solution_file_path: str | Path,
         submission_folder_path: str | Path,
-        ingestion: IngestionService | None = None,
-        execution: ExecutionService | None = None,
-        comparison: ComparisonService | None = None,
-        reporting: ReportingService | None = None,
         config_json: str | Path | None = None,
     ) -> None:
         """
@@ -41,12 +36,6 @@ class Evaluator:
         """
         self.solution_file_path = Path(solution_file_path)
         self.submission_folder_path = Path(submission_folder_path)
-
-        # Allow dependency injection for easier testing
-        self.ingestion = ingestion or IngestionService()
-        self.execution = execution or ExecutionService()
-        self.comparison = comparison or ComparisonService()
-        self.reporting = reporting or ReportingService()
 
         self.config = None
         if config_json is not None:
@@ -69,18 +58,19 @@ class Evaluator:
     # --- Sub-parts exposed for granular control -------------------------------
     def load(self) -> List[Path]:
         """Load and return list of submission file paths using ingestion service."""
-        return self.ingestion(self.solution_file_path, self.submission_folder_path)
-
+         
+        return IngestionService(self.solution_file_path, self.submission_folder_path)
+    
     def execute_all(self, submissions: Iterable[Path]) -> List[Any]:
         """Execute all submissions against the instructor solution.
 
         Returns a list of executed objects (the execution service is free to
         return domain-specific result objects).
         """
-        solution_file = submissions.load_submission()
+        solution_file = submissions.load_solution()
         executed_results: List[Any] = []
         for sub in submissions.list_submissions():
-            executed = self.execution.execute(solution_file, sub)
+            executed = ExecutionService().execute(solution_file, sub)
             executed_results.append(executed)
         return executed_results
 

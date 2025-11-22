@@ -89,7 +89,7 @@ class SolutionIngestion:
                     if func:
                         question_asserts[func]["tests"].append(line.strip())
 
-        return {
+        return {"type": "notebook",
             "metadata": metadata,
             "questions": dict(question_asserts),
         }

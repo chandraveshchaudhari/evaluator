@@ -6,13 +6,7 @@ from pathlib import Path
 from evaluator.ingestion.solution_ingestion import SolutionIngestion
 from evaluator.utils.path_utils import get_file_extension, list_files_paths
 from pathlib import Path
-from evaluator.ingestion.file_loader import (
-    load_notebook,
-    load_excel,
-    load_json,
-    load_csv,
-    load_raw_code,
-)
+from evaluator.utils.io_utils import load_notebook, load_excel, load_json, load_csv, load_raw_code
 from evaluator.ingestion.validation import validate_extension
 from evaluator.utils.path_utils import is_notebook, is_excel
 
@@ -26,7 +20,7 @@ class IngestionService:
         self.solution_file_path = solution_file_path
         self.submission_folder_path = submission_folder_path
     
-    def list_submissions(self, submission_folder_path: str | Path) -> Iterable[Path]:
+    def list_submissions(self, submission_folder_path: str | Path = None) -> Iterable[Path]:
         """List all submission files in the given folder."""
         submission_folder_path = submission_folder_path if submission_folder_path else self.submission_folder_path
         submission_files = []
@@ -96,7 +90,7 @@ class IngestionService:
         raise ValueError(f"Unsupported submission format: {path.suffix}")
 
 
-    def load_solution(self, solution_path):
+    def load_solution(self, solution_path=None):
         """
         Load instructor solution file based on file type.
 
