@@ -8,6 +8,7 @@ Functions:
 from __future__ import annotations
 from typing import List, Dict, Any
 import nbformat
+import ast
 
 
 def extract_code_cells(notebook_path: str) -> List[str]:
@@ -109,9 +110,7 @@ This module focuses on extracting Python functions from a .py file. It
 returns a mapping function_name -> source code snippet. The consumer may then
 generate tests or expected outputs from those functions.
 """
-from __future__ import annotations
-from typing import Dict
-import ast
+
 
 
 def extract_functions_from_py(py_file_path: str) -> Dict[str, str]:

@@ -1,8 +1,9 @@
 import json
+from pathlib import Path
 import pandas as pd
 import nbformat
 from openpyxl import load_workbook
-from os import Path
+
 
 def load_notebook(path):
     return nbformat.read(path, as_version=4)

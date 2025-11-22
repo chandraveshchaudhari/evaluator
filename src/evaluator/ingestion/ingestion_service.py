@@ -3,6 +3,7 @@
 from collections.abc import Iterable
 from pathlib import Path
 
+from evaluator.ingestion.solution_ingestion import SolutionIngestion
 from evaluator.ingestion.solution_loader import load_solution_notebook
 from evaluator.utils.path_utils import get_file_extension, list_files_paths
 from pathlib import Path
@@ -103,18 +104,15 @@ class IngestionService:
         Supports: .ipynb, .xlsx, .xlsm, .py, .json, .csv
         This returns a structured object ready for execution and comparison.
         """
-        solution_path = Path(solution_path)
+        solution_path = Path(solution_path) if solution_path else self.solution_file_path
 
         if not solution_path.exists():
             raise FileNotFoundError(f"Solution file not found: {solution_path}")
 
         if is_notebook(solution_path):
             validate_extension(solution_path, [".ipynb"])
-            return {
-                "type": "notebook",
-                "path": solution_path,
-                "notebook": load_solution_notebook(solution_path)
-            }
+            
+            return SolutionIngestion(solution_path).understand_notebook_solution()
 
         if is_excel(solution_path):
             validate_extension(solution_path, [".xlsx", ".xlsm"])

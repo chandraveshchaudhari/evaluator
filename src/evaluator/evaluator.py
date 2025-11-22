@@ -39,8 +39,8 @@ class Evaluator:
             ingestion, execution, comparison, reporting: Optional service overrides.
             config_json: Optional path to a JSON configuration file.
         """
-        self.solution_file = Path(solution_file_path)
-        self.submission_folder = Path(submission_folder_path)
+        self.solution_file_path = Path(solution_file_path)
+        self.submission_folder_path = Path(submission_folder_path)
 
         # Allow dependency injection for easier testing
         self.ingestion = ingestion or IngestionService()
@@ -63,14 +63,13 @@ class Evaluator:
         """
         submissions = self.load()
         executed = self.execute_all(submissions)
-        comparisons = self.compare_all(executed)
-        report = self.build_report(comparisons)
+        report = self.build_report(executed)
         return report
 
     # --- Sub-parts exposed for granular control -------------------------------
     def load(self) -> List[Path]:
         """Load and return list of submission file paths using ingestion service."""
-        return self.ingestion.list_submissions(self.solution_file_path, self.submission_folder_path)
+        return self.ingestion.IngestionService(self.solution_file_path, self.submission_folder_path)
 
     def execute_all(self, submissions: Iterable[Path]) -> List[Any]:
         """Execute all submissions against the instructor solution.
@@ -78,31 +77,16 @@ class Evaluator:
         Returns a list of executed objects (the execution service is free to
         return domain-specific result objects).
         """
+        solution_file = submissions.load_submission()
         executed_results: List[Any] = []
-        for sub in submissions:
-            executed = self.execution.execute(self.solution_file, sub)
+        for sub in submissions.list_submissions():
+            executed = self.execution.execute(solution_file, sub)
             executed_results.append(executed)
         return executed_results
 
-    def compare_all(self, executed_results: Iterable[Any]) -> List[dict]:
-        """Compare executed results and return comparison dictionaries."""
-        comparisons: List[dict] = []
-        for item in executed_results:
-            res = self.comparison.compare(item)
-            comparisons.append(res)
-        return comparisons
-
-    def build_report(self, comparison_results: Iterable[dict]) -> Any:
+    def build_report(self, executed_results: Iterable[dict]) -> Any:
         """Delegate to the reporting service to build final outputs."""
-        return self.reporting.build(comparison_results)
-
-    # --- Optional helper methods ---------------------------------------------
-    def validate(self) -> bool:
-        """Optional: perform quick validation of inputs (solution + folder).
-
-        Returns True if inputs seem valid, False otherwise.
-        """
-        return self.solution_file.exists() and self.submission_folder.exists()
+        return self.reporting.build(executed_results)
 
     def save_all_reports(self, report_obj: Any, output_dir: str | Path) -> Path:
         """Save generated report(s) to disk and return the target folder.
