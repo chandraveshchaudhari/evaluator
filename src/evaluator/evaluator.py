@@ -16,8 +16,6 @@ from evaluator.ingestion.ingestion_service import IngestionService
 from evaluator.execution.execution_service import ExecutionService
 from evaluator.reporting.reporting_service import ReportingService
 
-
-
 import json
 
 class Evaluator:

@@ -20,3 +20,8 @@ def get_file_extension(path):
     """Get the file extension of the given path."""
     return path.suffix.lower() if hasattr(path, "suffix") else ""
 
+def filename_safe_timestamp_format():
+    """Generate a file name with the current timestamp."""
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return timestamp

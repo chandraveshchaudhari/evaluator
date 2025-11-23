@@ -6,8 +6,7 @@ from pathlib import Path
 from evaluator.ingestion.solution_ingestion import SolutionIngestion
 from evaluator.utils.path_utils import get_file_extension, list_files_paths
 from pathlib import Path
-from evaluator.utils.io_utils import load_notebook, load_excel, load_json, load_csv, load_raw_code, safe_load_notebook
-from evaluator.ingestion.validation import validate_extension
+from evaluator.utils.io_utils import load_excel, load_json, load_csv, load_raw_code, safe_load_notebook
 from evaluator.utils.path_utils import is_notebook, is_excel
 
 
