@@ -99,15 +99,18 @@ def load_csv(path):
 def load_raw_code(path):
     return Path(path).read_text(encoding="utf8")
 
-
+import ast
+import nbformat
+from pathlib import Path
 
 
 def generate_student_notebook(instructor_path: str | Path, output_path: str | Path):
     """
     Create a student version of an instructor Jupyter notebook by:
       - Replacing all function bodies with 'pass'
-      - Removing assert statements
-      - Keeping Markdown cells and structure identical
+      - Removing any code cell that contains assertions
+      - Optionally removing inline assert statements (if present)
+      - Keeping Markdown cells and overall structure identical
 
     Parameters
     ----------
@@ -126,50 +129,69 @@ def generate_student_notebook(instructor_path: str | Path, output_path: str | Pa
     new_cells = []
 
     for cell in nb.cells:
-        if cell.cell_type == "code":
-            try:
-                tree = ast.parse(cell.source)
-                new_body = []
-                for node in tree.body:
-                    # Remove assertion statements
-                    if isinstance(node, ast.Assert):
-                        continue
-
-                    # Replace function bodies with "pass"
-                    elif isinstance(node, ast.FunctionDef):
-                        node.body = [ast.Pass()]
-                        new_body.append(node)
-
-                    # Keep top-level assignments and imports as-is
-                    elif isinstance(node, (ast.Import, ast.ImportFrom, ast.Assign, ast.Expr)):
-                        new_body.append(node)
-
-                # Regenerate cell code
-                new_module = ast.Module(body=new_body, type_ignores=[])
-                new_source = ast.unparse(new_module)
-                cell.source = new_source.strip()
-
-            except Exception:
-                # If parsing fails, remove asserts by string filter
-                lines = []
-                for line in cell.source.split("\n"):
-                    if not line.strip().startswith("assert "):
-                        lines.append(line)
-                cell.source = "\n".join(lines)
+        # --- Keep markdown cells as is ---
+        if cell.cell_type == "markdown":
             new_cells.append(cell)
+            continue
 
-        else:
-            # Keep markdown cells unchanged
+        if cell.cell_type != "code":
+            # Just in case other cell types appear
             new_cells.append(cell)
+            continue
 
-    # Construct the new notebook
+        src = cell.source or ""
+        stripped_lines = [l.strip() for l in src.splitlines() if l.strip()]
+
+        # --- NEW: drop any code cell that contains an assert line ---
+        if any(line.startswith("assert ") for line in stripped_lines):
+            # This is considered a test/assert cell → remove entirely
+            continue
+
+        # From here on, we are in a non-assert code cell (e.g., function definitions)
+        try:
+            tree = ast.parse(src)
+            new_body: list[ast.stmt] = []
+
+            for node in tree.body:
+                # Replace function implementations with stubs
+                if isinstance(node, ast.FunctionDef):
+                    node.body = [ast.Pass()]
+                    new_body.append(node)
+
+                # Keep top-level imports, assignments, and expressions
+                elif isinstance(node, (ast.Import, ast.ImportFrom, ast.Assign, ast.Expr)):
+                    new_body.append(node)
+
+                # Ignore anything else (for safety), or you can choose to keep it
+
+            # Rebuild the code cell
+            new_module = ast.Module(body=new_body, type_ignores=[])
+            new_source = ast.unparse(new_module).strip()
+
+            if new_source:
+                cell.source = new_source
+                new_cells.append(cell)
+
+        except Exception:
+            # Fallback: keep non-assert lines only, and still replace functions if desired
+            cleaned_lines = []
+            for line in src.splitlines():
+                stripped = line.strip()
+                # drop any inline assert as an extra safeguard
+                if stripped.startswith("assert "):
+                    continue
+                cleaned_lines.append(line)
+
+            new_src = "\n".join(cleaned_lines).strip()
+            if new_src:
+                cell.source = new_src
+                new_cells.append(cell)
+
+    # --- Rebuild notebook ---
     new_nb = nbformat.v4.new_notebook()
     new_nb.cells = new_cells
     new_nb.metadata = nb.metadata
 
-    # Write to file
     output_path.parent.mkdir(parents=True, exist_ok=True)
     nbformat.write(new_nb, output_path)
     print(f"✅ Student notebook generated at: {output_path}")
-
-
