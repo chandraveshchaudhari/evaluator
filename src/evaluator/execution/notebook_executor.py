@@ -1,9 +1,3 @@
-"""
-Notebook execution utilities for running and extracting results from Jupyter notebooks.
-"""
-
-
-
 import nbformat
 from nbclient import NotebookClient
 from pathlib import Path
@@ -13,7 +7,7 @@ import traceback
 class NotebookExecutor:
     """
     Executes a Jupyter notebook in a sandboxed environment
-    and extracts its namespace.
+    and extracts its final namespace.
     """
 
     def __init__(self, timeout=60):
@@ -25,37 +19,32 @@ class NotebookExecutor:
         """
         path = Path(path)
         nb = nbformat.read(path, as_version=4)
-
-        namespace = {}
         errors = []
         tb_text = None
+        namespace = {}
 
         try:
-            client = NotebookClient(
-                nb,
-                timeout=self.timeout,
-                allow_errors=True,
-                kernel_name="python3",
-            )
-            executed = client.execute()
+            client = NotebookClient(nb, timeout=self.timeout, allow_errors=True, kernel_name="python3")
+            executed_nb = client.execute()
         except Exception as e:
             tb_text = traceback.format_exc()
             errors.append(str(e))
-            executed = nb  # fallback (unexecuted)
+            executed_nb = nb  # fallback
 
-        # Extract variables by re-running all code cells in memory
-        for cell in executed.cells:
+        # Execute all code cells sequentially to build namespace
+        for cell in executed_nb.cells:
             if cell.cell_type != "code":
                 continue
             src = cell.get("source", "")
+            if not src.strip():
+                continue
             try:
                 exec(src, namespace)
             except Exception as e:
+                # Log but continue — ensures later cells still execute
                 errors.append(f"In cell: {src[:80]} -> {str(e)}")
 
-        # Clean up builtins for safety
         clean_ns = {k: v for k, v in namespace.items() if not k.startswith("__")}
-
         return {
             "namespace": clean_ns,
             "errors": errors,

@@ -1,6 +1,6 @@
 from evaluator.execution.notebook_executor import NotebookExecutor
 from evaluator.comparison.comparison_service import ComparisonService
-import traceback
+import copy
 
 
 class ExecutionService:
@@ -8,8 +8,9 @@ class ExecutionService:
     Executes student notebooks and evaluates them against instructor tests.
     """
 
-    def __init__(self, timeout=60):
+    def __init__(self, timeout: int = 60, debug: bool = False):
         self.timeout = timeout
+        self.debug = debug
 
     def execute(self, solution, submission_path):
         """
@@ -27,7 +28,7 @@ class ExecutionService:
         # 1. Execute student's notebook safely
         executor = NotebookExecutor(timeout=self.timeout)
         student_execution = executor.run_notebook(submission_path)
-        student_namespace = student_execution["namespace"]
+        base_namespace = student_execution.get("namespace", {})
 
         comparator = ComparisonService()
         all_results = []
@@ -36,33 +37,31 @@ class ExecutionService:
         for qname, qdata in solution.get("questions", {}).items():
             context_code = qdata.get("context_code", "")
             assertions = qdata.get("tests", [])
+            description = qdata.get("description", "")
 
-            # Run context/setup code inside student's namespace
-            if context_code:
-                try:
-                    exec(context_code, student_namespace)
-                except Exception:
-                    err = traceback.format_exc()
-                    student_execution["errors"].append(
-                        f"[{qname}] Setup failed:\n{err}"
-                    )
+            if self.debug:
+                print(f"\n[ExecutionService] Evaluating question: {qname}")
+                print(f"  context_code length: {len(context_code)} chars")
+                print(f"  assertions: {len(assertions)}")
 
-            # Run each assertion and collect results
-            if assertions:
-                q_results = comparator.run_assertions(
-                    student_namespace=student_namespace,
-                    assertions=assertions,
-                    question_name=qname,
-                )
+            # Create a shallow copy of namespace so questions do not interfere
+            question_namespace = copy.copy(base_namespace)
 
-                # attach description to each result
-                desc = qdata.get("description", "")
-                for r in q_results:
-                    r["description"] = desc
-                all_results.extend(q_results)
+            # 3. Run context + assertions via ComparisonService
+            q_results = comparator.run_assertions(
+                student_namespace=question_namespace,
+                assertions=assertions,
+                question_name=qname,
+                context_code=context_code,
+            )
 
+            # Attach description for reporting
+            for r in q_results:
+                r["description"] = description
 
-        # 3. Return structured evaluation
+            all_results.extend(q_results)
+
+        # 4. Return structured evaluation dict
         return {
             "student_path": submission_path,
             "execution": student_execution,

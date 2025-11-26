@@ -44,28 +44,30 @@ class SolutionIngestion:
                         func_name = self._extract_function_name(func_src)
 
                 # Step 3: Next cell (assertions) — link to that function
-                assertions = []
+                context_code = ""
+                assert_lines: list[str] = []
+
                 if func_name and i + 2 < len(nb.cells):
                     test_cell = nb.cells[i + 2]
                     if test_cell.cell_type == "code":
-                        assert_cell_src = test_cell.source.strip()
-                        # Keep full cell code for context (helpers, imports)
-                        full_context_code = assert_cell_src
-                        # Extract individual assert lines for reporting
-                        assert_lines = [
-                            line.strip()
-                            for line in assert_cell_src.splitlines()
-                            if line.strip().startswith("assert ")
-                        ]
-
+                        assert_cell_src = test_cell.source
+                        setup_lines = []
+                        for line in assert_cell_src.splitlines():
+                            stripped = line.strip()
+                            if stripped.startswith("assert "):
+                                assert_lines.append(stripped)
+                            else:
+                                setup_lines.append(line)
+                        context_code = "\n".join(setup_lines)
 
                 if func_name:
                     questions[func_name] = {
-                    "description": description,
-                    "function": func_src,
-                    "context_code": full_context_code, 
-                    "tests": assert_lines,
-                }
+                        "description": description,
+                        "function": func_src,
+                        "context_code": context_code,
+                        "tests": assert_lines,
+                    }
+
 
 
                 i += 3
