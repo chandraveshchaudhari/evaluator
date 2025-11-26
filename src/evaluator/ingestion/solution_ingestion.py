@@ -3,114 +3,106 @@ Handles ingestion of instructor-provided solution notebooks or files.
 Extracts correct functions and test definitions.
 """
 
-
+import nbformat
 import ast
-import nbformat
 from pathlib import Path
-from collections import defaultdict
-import nbformat
-from pathlib import Path
-
+from collections import OrderedDict
 from evaluator.utils.io_utils import safe_load_notebook
 
 
 class SolutionIngestion:
     """
-    Reads instructor's notebook and prepares structured test specification.
+    Reads instructor's notebook in a fixed 3-cell pattern:
+      [markdown: description] → [code: function] → [code: asserts + helper code]
     """
 
     def __init__(self, path: Path):
         self.path = Path(path)
 
-
     def understand_notebook_solution(self):
-        """
-        Parse the instructor notebook and extract:
-        - Metadata (name, roll_number)
-        - Question functions (question_one, question_two, etc.)
-        - Associated assertion tests
-        
-        Returns
-        -------
-        dict
-            {
-                "metadata": {"name": str, "roll_number": str},
-                "questions": {
-                    "question_one": {"tests": [list of assertion strings]},
-                    ...
-                }
-            }
-        """
         if not self.path.exists():
             raise FileNotFoundError(f"Solution notebook not found: {self.path}")
-    
-        notebook = safe_load_notebook(self.path)
 
+        nb = safe_load_notebook(self.path)
+        questions = OrderedDict()
         metadata = {}
-        question_asserts = defaultdict(lambda: {"tests": []})
 
-        for cell in notebook.cells:
-            if cell.cell_type != "code":
+        i = 0
+        while i < len(nb.cells):
+            cell = nb.cells[i]
+
+            # Step 1: Markdown → question description
+            if cell.cell_type == "markdown" and cell.source.strip().startswith("##"):
+                description = cell.source.strip().split("\n", 1)[-1].strip()
+
+                # Step 2: Next cell should define function
+                func_name, func_src = None, None
+                if i + 1 < len(nb.cells):
+                    code_cell = nb.cells[i + 1]
+                    if code_cell.cell_type == "code":
+                        func_src = code_cell.source.strip()
+                        func_name = self._extract_function_name(func_src)
+
+                # Step 3: Next cell (assertions) — link to that function
+                assertions = []
+                if func_name and i + 2 < len(nb.cells):
+                    test_cell = nb.cells[i + 2]
+                    if test_cell.cell_type == "code":
+                        assert_cell_src = test_cell.source.strip()
+                        # Keep full cell code for context (helpers, imports)
+                        full_context_code = assert_cell_src
+                        # Extract individual assert lines for reporting
+                        assert_lines = [
+                            line.strip()
+                            for line in assert_cell_src.splitlines()
+                            if line.strip().startswith("assert ")
+                        ]
+
+
+                if func_name:
+                    questions[func_name] = {
+                    "description": description,
+                    "function": func_src,
+                    "context_code": full_context_code, 
+                    "tests": assert_lines,
+                }
+
+
+                i += 3
                 continue
 
-            source = cell.source.strip()
-            if not source:
-                continue
+            # Capture metadata
+            if cell.cell_type == "code" and "name" in cell.source and "roll_number" in cell.source:
+                try:
+                    tree = ast.parse(cell.source)
+                    for node in tree.body:
+                        if isinstance(node, ast.Assign):
+                            for target in node.targets:
+                                if target.id == "name":
+                                    metadata["name"] = node.value.s
+                                elif target.id == "roll_number":
+                                    metadata["roll_number"] = node.value.s
+                except Exception:
+                    pass
 
-            try:
-                tree = ast.parse(source)
-            except SyntaxError:
-                continue  # skip malformed cell
+            i += 1
 
-            # --- Extract metadata ---
-            for node in tree.body:
-                if isinstance(node, ast.Assign):
-                    for target in node.targets:
-                        if isinstance(target, ast.Name):
-                            if target.id == "name":
-                                metadata["name"] = self._extract_constant(node.value)
-                            elif target.id == "roll_number":
-                                metadata["roll_number"] = self._extract_constant(node.value)
-
-                # --- Extract function definitions ---
-                if isinstance(node, ast.FunctionDef) and node.name.startswith("question_"):
-                    if node.name not in question_asserts:
-                        question_asserts[node.name] = {"tests": []}
-
-            # --- Extract assertions (link them to question functions) ---
-            for line in source.split("\n"):
-                if line.strip().startswith("assert "):
-                    func = self._extract_function_from_assert(line)
-                    if func:
-                        question_asserts[func]["tests"].append(line.strip())
-
-        return {"type": "notebook",
+        
+        return {
+            "type": "notebook",
             "metadata": metadata,
-            "questions": dict(question_asserts),
+            "questions": questions
         }
 
-    # ----------------- helper methods -----------------
-
-    def _extract_constant(self, node):
-        """Extract constant values from AST nodes safely."""
-        if isinstance(node, ast.Constant):
-            return node.value
-        elif isinstance(node, ast.Str):  # backward compat
-            return node.s
-        return None
-
-    def _extract_function_from_assert(self, assert_line: str):
-        """Extract question function name from an assert line."""
+    # --- Helper ---
+    def _extract_function_name(self, code: str) -> str | None:
+        """Return function name defined in code cell."""
         try:
-            line = assert_line.replace("assert", "").strip()
-            func_name = line.split("(")[0].strip()
-            if func_name.startswith("question_"):
-                return func_name
+            tree = ast.parse(code)
+            for node in tree.body:
+                if isinstance(node, ast.FunctionDef):
+                    return node.name
         except Exception:
             pass
         return None
 
-
-    def extract_cells(self):
-        """Return all code cells from instructor notebook."""
-        return [c for c in self.notebook.cells if c.cell_type == "code"]

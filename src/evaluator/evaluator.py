@@ -42,6 +42,10 @@ class Evaluator:
                 with open(config_path, "r", encoding="utf8") as f:
                     self.config = json.load(f)
 
+        self.submissions = None
+        self.executed = None
+        self.report = None
+
     # --- High-level pipelines -------------------------------------------------
     def run(self) -> Any:
         """Run the full pipeline: load -> execute -> compare -> report.

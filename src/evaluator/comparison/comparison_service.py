@@ -3,23 +3,38 @@ import traceback
 
 class ComparisonService:
     """
-    Service for comparing student execution with instructor solution.
+    Compares student execution results against instructor-defined assertions.
     """
 
-    def run_assertions(self, student_namespace, assertions):
+    def run_assertions(self, student_namespace, assertions, question_name=None):
         """
-        Execute each instructor assertion against the student's namespace.
-        Returns a list of dictionaries summarizing test results.
+        Execute each instructor assertion in the student's namespace.
+
+        Parameters
+        ----------
+        student_namespace : dict
+            Namespace of student's executed notebook.
+        assertions : list[str]
+            Assertion statements to run.
+        question_name : str, optional
+            The question/function name these assertions belong to.
+
+        Returns
+        -------
+        list[dict] : results with keys:
+            - question
+            - assertion
+            - status ('passed'/'failed')
+            - score (1/0)
+            - error (traceback or None)
         """
         results = []
 
         for code in assertions:
-            question_name = self._extract_question_name(code)
-
             try:
                 exec(code, student_namespace)
                 results.append({
-                    "question": question_name,
+                    "question": question_name or "unknown",
                     "assertion": code,
                     "status": "passed",
                     "error": None,
@@ -28,7 +43,7 @@ class ComparisonService:
             except Exception:
                 tb = traceback.format_exc()
                 results.append({
-                    "question": question_name,
+                    "question": question_name or "unknown",
                     "assertion": code,
                     "status": "failed",
                     "error": tb,
@@ -36,6 +51,7 @@ class ComparisonService:
                 })
 
         return results
+
 
     def _extract_question_name(self, assert_line):
         """
