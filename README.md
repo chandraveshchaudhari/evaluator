@@ -53,7 +53,7 @@ python3 -m pip install instantgrade
 
 For development installation:
 ```bash
-git clone https://github.com/chandraveshchaudhari/evaluator.git
+git clone https://github.com/chandraveshchaudhari/instantgrade.git
 cd evaluator
 python3 -m pip install -e .
 ```
@@ -75,7 +75,7 @@ python3 -m pip install -e .
 
 #### Python API
 ```python
-from evaluator import Evaluator
+from instantgrade import Evaluator
 
 # Initialize evaluator with solution and submissions folder
 evaluator = Evaluator(
@@ -117,19 +117,19 @@ instantgrade --solution solution.xlsx --submissions ./excel_submissions/ --outpu
 - MATLAB scripts (.m)
 
 ## Important links
-- [Documentation](https://github.com/chandraveshchaudhari/evaluator/wiki)
-- [Quick tour](https://github.com/chandraveshchaudhari/evaluator/blob/master/data/python_example1/basic_python_flow.ipynb)
+- [Documentation](https://github.com/chandraveshchaudhari/instantgrade/wiki)
+- [Quick tour](https://github.com/chandraveshchaudhari/instantgrade/blob/master/data/python_example1/basic_python_flow.ipynb)
 - [Project maintainer (feel free to contact)](mailto:chandraveshchaudhari@gmail.com?subject=[GitHub]%20Evaluator) 
-- [Future Improvements](https://github.com/chandraveshchaudhari/evaluator/projects)
-- [License](https://github.com/chandraveshchaudhari/evaluator/blob/master/LICENSE.txt)
+- [Future Improvements](https://github.com/chandraveshchaudhari/instantgrade/projects)
+- [License](https://github.com/chandraveshchaudhari/instantgrade/blob/master/LICENSE.txt)
 
 ## Contribution
 All kinds of contributions are appreciated:
-- [Improving readability of documentation](https://github.com/chandraveshchaudhari/evaluator/wiki)
-- [Feature Request](https://github.com/chandraveshchaudhari/evaluator/issues/new/choose)
-- [Reporting bugs](https://github.com/chandraveshchaudhari/evaluator/issues/new/choose)
-- [Contribute code](https://github.com/chandraveshchaudhari/evaluator/compare)
-- [Asking questions in discussions](https://github.com/chandraveshchaudhari/evaluator/discussions)
+- [Improving readability of documentation](https://github.com/chandraveshchaudhari/instantgrade/wiki)
+- [Feature Request](https://github.com/chandraveshchaudhari/instantgrade/issues/new/choose)
+- [Reporting bugs](https://github.com/chandraveshchaudhari/instantgrade/issues/new/choose)
+- [Contribute code](https://github.com/chandraveshchaudhari/instantgrade/compare)
+- [Asking questions in discussions](https://github.com/chandraveshchaudhari/instantgrade/discussions)
 
 ### How to Contribute
 1. Fork the repository
@@ -166,6 +166,6 @@ To publish a new version to PyPI:
 For detailed instructions, see [PUBLISHING.md](PUBLISHING.md)
 
 ### CI/CD Status
-![Test Package Build](https://github.com/chandraveshchaudhari/evaluator/actions/workflows/test.yml/badge.svg)
-![Publish to PyPI](https://github.com/chandraveshchaudhari/evaluator/actions/workflows/publish-on-tag.yml/badge.svg)
+![Test Package Build](https://github.com/chandraveshchaudhari/instantgrade/actions/workflows/test.yml/badge.svg)
+![Publish to PyPI](https://github.com/chandraveshchaudhari/instantgrade/actions/workflows/publish-on-tag.yml/badge.svg)
 

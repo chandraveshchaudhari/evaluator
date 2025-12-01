@@ -1,5 +1,5 @@
-from evaluator.execution.notebook_executor import NotebookExecutor
-from evaluator.comparison.comparison_service import ComparisonService
+from instantgrade.execution.notebook_executor import NotebookExecutor
+from instantgrade.comparison.comparison_service import ComparisonService
 import copy
 
 

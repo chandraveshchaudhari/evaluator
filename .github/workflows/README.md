@@ -166,7 +166,7 @@ python -m build
 pip install -e .
 
 # Test import
-python -c "from evaluator import Evaluator; print('Success!')"
+python -c "from instantgrade import Evaluator; print('Success!')"
 
 # Or publish to TestPyPI first
 python -m twine upload --repository testpypi dist/*

@@ -3,11 +3,11 @@
 from collections.abc import Iterable
 from pathlib import Path
 
-from evaluator.ingestion.solution_ingestion import SolutionIngestion
-from evaluator.utils.path_utils import get_file_extension, list_files_paths
+from instantgrade.ingestion.solution_ingestion import SolutionIngestion
+from instantgrade.utils.path_utils import get_file_extension, list_files_paths
 from pathlib import Path
-from evaluator.utils.io_utils import load_excel, load_json, load_csv, load_raw_code, safe_load_notebook
-from evaluator.utils.path_utils import is_notebook, is_excel
+from instantgrade.utils.io_utils import load_excel, load_json, load_csv, load_raw_code, safe_load_notebook
+from instantgrade.utils.path_utils import is_notebook, is_excel
 
 
 

@@ -1,8 +1,8 @@
-# evaluator/cli/main.py
+# instantgrade/cli/main.py
 
 import click
 from pathlib import Path
-from evaluator import Evaluator
+from instantgrade import Evaluator
 
 @click.group()
 def cli():

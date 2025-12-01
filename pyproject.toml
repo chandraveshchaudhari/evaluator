@@ -58,14 +58,14 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/chandraveshchaudhari/evaluator"
-Documentation = "https://github.com/chandraveshchaudhari/evaluator/wiki"
-Repository = "https://github.com/chandraveshchaudhari/evaluator"
-"Bug Tracker" = "https://github.com/chandraveshchaudhari/evaluator/issues"
-Changelog = "https://github.com/chandraveshchaudhari/evaluator/releases"
+Homepage = "https://github.com/chandraveshchaudhari/instantgrade"
+Documentation = "https://github.com/chandraveshchaudhari/instantgrade/wiki"
+Repository = "https://github.com/chandraveshchaudhari/instantgrade"
+"Bug Tracker" = "https://github.com/chandraveshchaudhari/instantgrade/issues"
+Changelog = "https://github.com/chandraveshchaudhari/instantgrade/releases"
 
 [project.scripts]
-instantgrade = "evaluator.cli.main:cli"
+instantgrade = "instantgrade.cli.main:cli"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

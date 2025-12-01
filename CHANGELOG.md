@@ -70,5 +70,5 @@ Example:
 - Updated dependencies to latest versions
 ```
 
-[Unreleased]: https://github.com/chandraveshchaudhari/evaluator/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/chandraveshchaudhari/evaluator/releases/tag/v0.1.0
+[Unreleased]: https://github.com/chandraveshchaudhari/instantgrade/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/chandraveshchaudhari/instantgrade/releases/tag/v0.1.0

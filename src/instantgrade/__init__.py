@@ -1,8 +1,8 @@
-"""Top-level evaluator package exports.
+"""Top-level instantgrade package exports.
 
 Expose the high-level modules so users can import subpackages like:
 
-from evaluator.ingestion import file_loader
+from instantgrade.ingestion import file_loader
 
 """
 # from .ingestion import file_loader  # noqa: F401

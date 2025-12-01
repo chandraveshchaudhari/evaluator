@@ -7,7 +7,7 @@ import nbformat
 import ast
 from pathlib import Path
 from collections import OrderedDict
-from evaluator.utils.io_utils import safe_load_notebook
+from instantgrade.utils.io_utils import safe_load_notebook
 
 
 class SolutionIngestion:

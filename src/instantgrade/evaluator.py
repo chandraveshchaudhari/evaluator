@@ -12,9 +12,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable, List, Any
 
-from evaluator.ingestion.ingestion_service import IngestionService
-from evaluator.execution.execution_service import ExecutionService
-from evaluator.reporting.reporting_service import ReportingService
+from instantgrade.ingestion.ingestion_service import IngestionService
+from instantgrade.execution.execution_service import ExecutionService
+from instantgrade.reporting.reporting_service import ReportingService
 
 import json
 

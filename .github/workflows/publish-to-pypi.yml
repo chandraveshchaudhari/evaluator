@@ -43,4 +43,4 @@ jobs:
         run: |
           sleep 60
           pip install instantgrade
-          python -c "from evaluator import Evaluator; print('Package installed successfully!')"
+          python -c "from instantgrade import Evaluator; print('Package installed successfully!')"

@@ -195,7 +195,7 @@ setup(
     # executes the function `main` from this package when invoked:
     entry_points={  # Optional
         'console_scripts': [
-            'instantgrade=evaluator.cli.main:cli',
+            'instantgrade=instantgrade.cli.main:cli',
         ],
     },
 
@@ -209,10 +209,10 @@ setup(
     # maintainers, and where to support the project financially. The key is
     # what's used to render the link text on PyPI.
     project_urls={  # Optional
-        "Bug Tracker": "https://github.com/chandraveshchaudhari/evaluator/issues",
-        'Bug Reports': 'https://github.com/chandraveshchaudhari/evaluator/issues',
-        'Documentation': 'https://github.com/chandraveshchaudhari/evaluator/wiki',
+        "Bug Tracker": "https://github.com/chandraveshchaudhari/instantgrade/issues",
+        'Bug Reports': 'https://github.com/chandraveshchaudhari/instantgrade/issues',
+        'Documentation': 'https://github.com/chandraveshchaudhari/instantgrade/wiki',
         'Say Thanks!': 'https://saythanks.io/to/chandraveshchaudhari',
-        'Source': 'https://github.com/chandraveshchaudhari/evaluator/',
+        'Source': 'https://github.com/chandraveshchaudhari/instantgrade/',
     },
 )

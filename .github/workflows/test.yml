@@ -41,7 +41,7 @@ jobs:
     - name: Test package installation
       run: |
         pip install dist/*.whl
-        python -c "from evaluator import Evaluator; print('Package imported successfully!')"
+        python -c "from instantgrade import Evaluator; print('Package imported successfully!')"
 
     - name: Clean up
       run: pip uninstall -y instantgrade
