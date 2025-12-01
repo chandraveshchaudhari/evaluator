@@ -5,6 +5,27 @@
 # InstantGrade
 > An automated evaluation framework for Python notebooks and Excel assignments
 
+[![PyPI version](https://badge.fury.io/py/instantgrade.svg)](https://pypi.org/project/instantgrade/)
+[![Python](https://img.shields.io/pypi/pyversions/instantgrade.svg)](https://pypi.org/project/instantgrade/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://chandraveshchaudhari.github.io/instantgrade/)
+[![CI](https://github.com/chandraveshchaudhari/instantgrade/workflows/Test%20Package%20Build/badge.svg)](https://github.com/chandraveshchaudhari/instantgrade/actions)
+[![codecov](https://codecov.io/gh/chandraveshchaudhari/instantgrade/branch/master/graph/badge.svg)](https://codecov.io/gh/chandraveshchaudhari/instantgrade)
+
+---
+
+## 📚 Documentation
+
+**[Read the full documentation →](https://chandraveshchaudhari.github.io/instantgrade/)**
+
+- **[Installation Guide](https://chandraveshchaudhari.github.io/instantgrade/installation.html)** - Get started in minutes
+- **[Quick Start](https://chandraveshchaudhari.github.io/instantgrade/quickstart.html)** - Your first evaluation
+- **[Usage Guide](https://chandraveshchaudhari.github.io/instantgrade/usage.html)** - Comprehensive features
+- **[API Reference](https://chandraveshchaudhari.github.io/instantgrade/api.html)** - Complete API documentation
+- **[Examples](https://chandraveshchaudhari.github.io/instantgrade/examples.html)** - Real-world use cases
+
+---
+
 - [Introduction](#introduction)
 - [Features](#features)
 - [Installation](#installation)
@@ -138,34 +159,72 @@ All kinds of contributions are appreciated:
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+For detailed contribution guidelines, see the [Contributing Guide](https://chandraveshchaudhari.github.io/instantgrade/contributing.html).
+
+## Documentation
+
+Complete documentation is available at **[chandraveshchaudhari.github.io/instantgrade](https://chandraveshchaudhari.github.io/instantgrade/)**
+
+### Building Documentation Locally
+
+```bash
+# Install documentation dependencies
+pip install -e ".[docs]"
+
+# Build the documentation
+cd docs
+make html
+
+# View the documentation
+open build/html/index.html  # macOS
+# or
+xdg-open build/html/index.html  # Linux
+# or
+start build/html/index.html  # Windows
+```
+
+The documentation is built using:
+- **Sphinx** - Documentation engine
+- **MyST Parser** - Markdown support
+- **Furo** - Clean, modern theme
+- **Jupyter-Sphinx** - Notebook integration
+- **Sphinx Autodoc** - Automatic API documentation
+
 ## Development & Deployment
 
 ### Continuous Integration
 This project uses GitHub Actions for continuous integration and deployment:
-- **Automated Testing**: Every push is automatically tested across multiple Python versions (3.8-3.12) and operating systems
+- **Automated Testing**: Every push is automatically tested across multiple Python versions (3.10-3.12) and operating systems
 - **Automatic PyPI Publishing**: New releases are automatically published to PyPI when version tags are pushed
+- **Documentation Deployment**: Documentation is automatically built and deployed to GitHub Pages
 - **Build Verification**: Package builds are verified before deployment
 
 ### Publishing New Versions
 To publish a new version to PyPI:
 
 1. Update the version number in `setup.py` and `pyproject.toml`
-2. Commit the changes:
+2. Update `CHANGELOG.md` with the new version
+3. Commit the changes:
    ```bash
-   git add setup.py pyproject.toml
+   git add setup.py pyproject.toml CHANGELOG.md
    git commit -m "Bump version to X.Y.Z"
    ```
-3. Create and push a version tag:
+4. Create and push a version tag:
    ```bash
    git tag vX.Y.Z
    git push origin master
    git push origin vX.Y.Z
    ```
-4. GitHub Actions will automatically build and publish to PyPI
+5. GitHub Actions will automatically:
+   - Build and publish to PyPI
+   - Create a GitHub Release
+   - Deploy updated documentation
 
 For detailed instructions, see [PUBLISHING.md](PUBLISHING.md)
 
 ### CI/CD Status
 ![Test Package Build](https://github.com/chandraveshchaudhari/instantgrade/actions/workflows/test.yml/badge.svg)
-![Publish to PyPI](https://github.com/chandraveshchaudhari/instantgrade/actions/workflows/publish-on-tag.yml/badge.svg)
+![Publish to PyPI](https://github.com/chandraveshchaudhari/instantgrade/actions/workflows/publish.yml/badge.svg)
+![Documentation](https://github.com/chandraveshchaudhari/instantgrade/actions/workflows/docs.yml/badge.svg)
+
 

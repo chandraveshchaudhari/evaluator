@@ -57,6 +57,31 @@ setup(
         "xlwings": ["xlwings>=0.24.0"],
         "dev": ["pytest>=6.0", "black>=21.0", "flake8>=3.9"],
         "test": ["pytest>=6.0", "coverage>=5.5"],
+        "docs": [
+            "sphinx>=7.0.0",
+            "sphinx-autobuild>=2024.0.0",
+            "myst-parser>=2.0.0",
+            "sphinx-autodoc-typehints>=1.25.0",
+            "furo>=2024.1.29",
+            "jupyter-sphinx>=0.5.0",
+            "sphinx-copybutton>=0.5.2",
+            "sphinx-design>=0.5.0",
+        ],
+        "all": [
+            "xlwings>=0.24.0",
+            "pytest>=6.0",
+            "black>=21.0",
+            "flake8>=3.9",
+            "coverage>=5.5",
+            "sphinx>=7.0.0",
+            "sphinx-autobuild>=2024.0.0",
+            "myst-parser>=2.0.0",
+            "sphinx-autodoc-typehints>=1.25.0",
+            "furo>=2024.1.29",
+            "jupyter-sphinx>=0.5.0",
+            "sphinx-copybutton>=0.5.2",
+            "sphinx-design>=0.5.0",
+        ],
     },
 
     entry_points={
@@ -67,7 +92,7 @@ setup(
 
     project_urls={
         "Bug Tracker": "https://github.com/chandraveshchaudhari/instantgrade/issues",
-        "Documentation": "https://github.com/chandraveshchaudhari/instantgrade/wiki",
+        "Documentation": "https://chandraveshchaudhari.github.io/instantgrade/",
         "Source": "https://github.com/chandraveshchaudhari/instantgrade/",
     },
 )
