@@ -66,6 +66,7 @@ setup(
             "jupyter-sphinx>=0.5.0",
             "sphinx-copybutton>=0.5.2",
             "sphinx-design>=0.5.0",
+            "linkify-it-py>=2.0.0",
         ],
         "all": [
             "xlwings>=0.24.0",
@@ -81,6 +82,7 @@ setup(
             "jupyter-sphinx>=0.5.0",
             "sphinx-copybutton>=0.5.2",
             "sphinx-design>=0.5.0",
+            "linkify-it-py>=2.0.0",
         ],
     },
 
