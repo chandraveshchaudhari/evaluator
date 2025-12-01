@@ -42,14 +42,14 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           pip install dist/*.whl
-          python -c "from instantgrade import Evaluator; print('✅ Package imported successfully!')"
+          python -c "from instantgrade import Evaluator; print('Package imported successfully!')"
 
       - name: Test package installation (Windows)
         if: runner.os == 'Windows'
         shell: bash
         run: |
           pip install dist/*.whl
-          python -c "from instantgrade import Evaluator; print('✅ Package imported successfully!')"
+          python -c "from instantgrade import Evaluator; print('Package imported successfully!')"
 
       - name: Clean up
         run: pip uninstall -y instantgrade
