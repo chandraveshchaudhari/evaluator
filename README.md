@@ -2,69 +2,170 @@
   <img src="https://raw.githubusercontent.com/chandraveshchaudhari/personal-information/bf3d602dbbf0b7d0bbe6461351c163144b617d24/logos/my%20github%20logo%20template-python%20project%20template%20small.png" width="640" height="320">
 </div>
 
-# Title of the python project
-> Citation
+# InstantGrade
+> An automated evaluation framework for Python notebooks and Excel assignments
 
 - [Introduction](#introduction)
 - [Features](#features)
 - [Installation](#installation)
+- [Usage](#usage)
+- [Supported File Types](#supported-file-types)
 - [Contribution](#contribution)
 - [Future Improvements](#future-improvements)
 
 ## Introduction
-what it does. why it was made. what is future vision. 
+InstantGrade is a comprehensive, extensible evaluation framework designed to automatically grade student submissions against instructor solution files. It supports multiple file formats including Python Jupyter notebooks and Excel files, making it ideal for educational institutions and online learning platforms.
 
-### Authors
-<img align="left" width="231.95" height="75" src="https://raw.githubusercontent.com/chandraveshchaudhari/personal-information/initial_setup/images/christ.png">
+The framework was created to streamline the grading process for programming and data analysis assignments, reducing manual effort while providing detailed, actionable feedback to students. The vision is to expand support to additional file types and programming languages, creating a universal evaluation platform for technical education. 
 
-[Chandravesh chaudhari][chandravesh linkedin], Doctoral candidate at [CHRIST (Deemed to be University), Bangalore, India][christ university website] under supervision of [Dr. Geetanjali purswani][geetanjali linkedin].
 
-<br/>
+## 👩‍🏫 About the Maintainer
 
-[chandravesh linkedin]: https://www.linkedin.com/in/chandravesh-chaudhari "chandravesh linkedin profile"
-[geetanjali linkedin]: https://www.linkedin.com/in/dr-geetanjali-purswani-546336b8 "geetanjali linkedin profile"
-[christ university website]: https://christuniversity.in/ "website"
+**Dr. Chandravesh Chaudhari**
+
+📧 [chandraveshchaudhari@gmail.com](mailto:chandraveshchaudhari@gmail.com)
+🌐 [Website](https://chandraveshchaudhari.github.io/website/)
+🔗 [LinkedIn](https://www.linkedin.com/in/chandraveshchaudhari)
+
 
 ## Features
-- first
-- second
-- and so on
+- **Automated Evaluation**: Compare student submissions against instructor solutions automatically
+- **Multiple File Format Support**: Currently supports Python Jupyter notebooks (.ipynb) and Excel files (.xlsx, .xls)
+- **Comprehensive Reporting**: Generate detailed HTML reports with visual feedback and scoring
+- **AST Analysis**: Deep code comparison using Abstract Syntax Tree analysis for Python code
+- **Flexible Configuration**: Customizable evaluation criteria through JSON configuration
+- **Batch Processing**: Evaluate multiple student submissions in one run
+- **Extensible Architecture**: Easy to add support for new file types and evaluation strategies
 
-#### significance
-- first
-- second and so on
+#### Significance
+- **Time-Saving**: Reduces manual grading effort by 90% for programming assignments
+- **Consistency**: Ensures uniform evaluation criteria across all student submissions
+- **Detailed Feedback**: Provides students with specific areas of improvement
+- **Scalability**: Handles large classes with hundreds of submissions efficiently
+- **Educational Focus**: Allows instructors to focus on teaching rather than repetitive grading tasks
 
 ## Installation 
-This project is available at [PyPI](url). For help in installation check 
+This project is available at [PyPI](https://pypi.org/project/instantgrade/). For help in installation check 
 [instructions](https://packaging.python.org/tutorials/installing-packages/#installing-from-pypi)
 ```bash
-python3 -m pip install projectname  
+python3 -m pip install instantgrade  
+```
+
+For development installation:
+```bash
+git clone https://github.com/chandraveshchaudhari/evaluator.git
+cd evaluator
+python3 -m pip install -e .
 ```
 
 ### Dependencies
 ##### Required
-- [project-name](url) - Description of project.
+- [pandas](https://pandas.pydata.org/) - Data manipulation and analysis for comparison results
+- [openpyxl](https://openpyxl.readthedocs.io/) - Reading and writing Excel files
+- [nbformat](https://nbformat.readthedocs.io/) - Working with Jupyter notebook files
+- [nbclient](https://nbclient.readthedocs.io/) - Executing Jupyter notebooks programmatically
+- [click](https://click.palletsprojects.com/) - Creating command-line interfaces
 
 ##### Optional
-- [project-name](url) - Description of project.
+- [xlwings](https://www.xlwings.org/) - Advanced Excel automation capabilities (Windows/macOS only)
+
+## Usage
+
+### Basic Usage
+
+#### Python API
+```python
+from evaluator import Evaluator
+
+# Initialize evaluator with solution and submissions folder
+evaluator = Evaluator(
+    solution_file_path="path/to/solution.ipynb",
+    submission_folder_path="path/to/submissions/"
+)
+
+# Run complete evaluation pipeline
+report = evaluator.run()
+```
+
+#### Command Line Interface
+```bash
+# Evaluate Python notebook submissions
+instantgrade --solution sample_solutions.ipynb --submissions ./submissions/ --output ./report/
+
+# Evaluate Excel submissions
+instantgrade --solution solution.xlsx --submissions ./excel_submissions/ --output ./excel_report/
+```
+
+## Supported File Types
+
+### Python Jupyter Notebooks (.ipynb)
+- Executes code cells and compares outputs
+- AST-based code structure comparison
+- Variable and function definition verification
+- Exception and error handling analysis
+
+### Excel Files (.xlsx, .xls)
+- Cell value comparison across worksheets
+- Formula evaluation and verification
+- Conditional formatting checks
+- Chart and pivot table analysis (with xlwings)
+
+### Future Support (Planned)
+- R Markdown files (.Rmd)
+- Python scripts (.py)
+- SQL files (.sql)
+- MATLAB scripts (.m)
 
 ## Important links
-- [Documentation](documentation link)
-- [Quick tour](tutorial file link)
-- [Project maintainer (feel free to contact)](mailto:chandraveshchaudhari@gmail.com?subject=[GitHub]%20Source%20repository-name) 
-- [Future Improvements](https://github.com/chandraveshchaudhari/repository-name/projects)
-- [License](https://github.com/chandraveshchaudhari/repository-name/blob/master/LICENSE.txt)
+- [Documentation](https://github.com/chandraveshchaudhari/evaluator/wiki)
+- [Quick tour](https://github.com/chandraveshchaudhari/evaluator/blob/master/data/python_example1/basic_python_flow.ipynb)
+- [Project maintainer (feel free to contact)](mailto:chandraveshchaudhari@gmail.com?subject=[GitHub]%20Evaluator) 
+- [Future Improvements](https://github.com/chandraveshchaudhari/evaluator/projects)
+- [License](https://github.com/chandraveshchaudhari/evaluator/blob/master/LICENSE.txt)
 
 ## Contribution
-all kinds of contributions are appreciated.
-- [Improving readability of documentation](documentation link)
-- [Feature Request](https://github.com/chandraveshchaudhari/repository-name/issues/new/choose)
-- [Reporting bugs](https://github.com/chandraveshchaudhari/repository-name/issues/new/choose)
-- [Contribute code](https://github.com/chandraveshchaudhari/repository-name/compare)
-- [Asking questions in discussions](https://github.com/chandraveshchaudhari/repository-name/discussions)
+All kinds of contributions are appreciated:
+- [Improving readability of documentation](https://github.com/chandraveshchaudhari/evaluator/wiki)
+- [Feature Request](https://github.com/chandraveshchaudhari/evaluator/issues/new/choose)
+- [Reporting bugs](https://github.com/chandraveshchaudhari/evaluator/issues/new/choose)
+- [Contribute code](https://github.com/chandraveshchaudhari/evaluator/compare)
+- [Asking questions in discussions](https://github.com/chandraveshchaudhari/evaluator/discussions)
 
-## Future Improvements
-Work title
-- [ ] work part one
-- [X] work part two
+### How to Contribute
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## Development & Deployment
+
+### Continuous Integration
+This project uses GitHub Actions for continuous integration and deployment:
+- **Automated Testing**: Every push is automatically tested across multiple Python versions (3.8-3.12) and operating systems
+- **Automatic PyPI Publishing**: New releases are automatically published to PyPI when version tags are pushed
+- **Build Verification**: Package builds are verified before deployment
+
+### Publishing New Versions
+To publish a new version to PyPI:
+
+1. Update the version number in `setup.py` and `pyproject.toml`
+2. Commit the changes:
+   ```bash
+   git add setup.py pyproject.toml
+   git commit -m "Bump version to X.Y.Z"
+   ```
+3. Create and push a version tag:
+   ```bash
+   git tag vX.Y.Z
+   git push origin master
+   git push origin vX.Y.Z
+   ```
+4. GitHub Actions will automatically build and publish to PyPI
+
+For detailed instructions, see [PUBLISHING.md](PUBLISHING.md)
+
+### CI/CD Status
+![Test Package Build](https://github.com/chandraveshchaudhari/evaluator/actions/workflows/test.yml/badge.svg)
+![Publish to PyPI](https://github.com/chandraveshchaudhari/evaluator/actions/workflows/publish-on-tag.yml/badge.svg)
 
