@@ -10,17 +10,11 @@ on:
 
 permissions:
   contents: read
-
+  id-token: write  # Required for PyPI Trusted Publishing via OIDC
+ 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    
-    environment:
-      name: pypi
-      url: https://pypi.org/p/instantgrade
-
-    permissions:
-      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
 
     steps:
     - name: Checkout code
