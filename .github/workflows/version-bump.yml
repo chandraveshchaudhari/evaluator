@@ -2,6 +2,7 @@ name: Auto Version Bump
 
 # Automatically increment the patch version (0.1.0 -> 0.1.1)
 # when code is pushed to master branch
+# Also triggers the publish workflow
 
 on:
   push:
@@ -101,9 +102,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          # Check if tag already exists locally
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "Tag v$VERSION already exists locally, force updating"
+            git tag -d "v$VERSION"
+          fi
+
           git tag -a "v$VERSION" -m "Release v$VERSION"
           git push origin "v$VERSION"
           echo "Created and pushed tag v$VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Create GitHub Release
         env:
@@ -114,8 +122,17 @@ jobs:
           else
             VERSION="${{ steps.current_version.outputs.version }}"
           fi
-
-          gh release create "v$VERSION" \
-            --title "Release v$VERSION" \
-            --notes "Automated release for version $VERSION" \
-            --repo ${{ github.repository }}
+          
+          # Check if release already exists
+          EXISTING_RELEASE=$(gh release view "v$VERSION" --repo ${{ github.repository }} 2>&1 || true)
+          
+          if echo "$EXISTING_RELEASE" | grep -q "v$VERSION"; then
+            echo "Release v$VERSION already exists, skipping creation"
+          else
+            echo "Creating GitHub Release v$VERSION..."
+            gh release create "v$VERSION" \
+              --title "Release v$VERSION" \
+              --notes "Automated release for version $VERSION" \
+              --repo ${{ github.repository }}
+            echo "✅ Created GitHub Release v$VERSION"
+          fi
