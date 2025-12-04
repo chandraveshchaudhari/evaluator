@@ -11,12 +11,20 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Iterable, List, Any
+import logging
 
 from instantgrade.ingestion.ingestion_service import IngestionService
 from instantgrade.execution.execution_service import ExecutionService
 from instantgrade.reporting.reporting_service import ReportingService
 
 import json
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 class Evaluator:
@@ -104,9 +112,24 @@ class Evaluator:
         >>> evaluator = Evaluator("solution.ipynb", "submissions/")
         >>> report = evaluator.run()
         """
+        logger.info("=" * 70)
+        logger.info("🚀 STARTING EVALUATION PIPELINE")
+        logger.info("=" * 70)
+        logger.info(f"Solution file: {self.solution_file_path}")
+        logger.info(f"Submissions folder: {self.submission_folder_path}")
+        
         submissions = self.load()
+        logger.info(f"✅ Loaded {len(submissions)} submissions")
+        
         executed = self.execute_all(submissions)
+        logger.info(f"✅ Executed all {len(executed)} submissions")
+        
         report = self.build_report(executed)
+        logger.info("✅ Built report")
+        logger.info("=" * 70)
+        logger.info("🎉 EVALUATION PIPELINE COMPLETED SUCCESSFULLY")
+        logger.info("=" * 70)
+        
         return report
 
     # --- Sub-parts exposed for granular control -------------------------------
@@ -124,7 +147,7 @@ class Evaluator:
         >>> submissions = evaluator.load()
         >>> print(f"Found {len(submissions)} submissions")
         """
-
+        logger.info("\n📂 LOADING SUBMISSIONS...")
         return IngestionService(self.solution_file_path, self.submission_folder_path)
 
     def execute_all(self, submissions: Iterable[Path]) -> List[Any]:
@@ -147,11 +170,33 @@ class Evaluator:
         >>> executed = evaluator.execute_all(submissions)
         >>> print(f"Executed {len(executed)} submissions")
         """
+        logger.info("\n⚙️  EXECUTING SUBMISSIONS...")
+        
         solution_file = submissions.load_solution()
+        submission_list = list(submissions.list_submissions())
+        total_submissions = len(submission_list)
+        
+        logger.info(f"Total submissions to evaluate: {total_submissions}")
+        
         executed_results: List[Any] = []
-        for sub in submissions.list_submissions():
-            executed = ExecutionService().execute(solution_file, sub)
-            executed_results.append(executed)
+        
+        for idx, sub in enumerate(submission_list, 1):
+            # Extract student info from filename
+            filename = sub.name
+            logger.info(f"\n[{idx}/{total_submissions}] 👤 Processing: {filename}")
+            
+            try:
+                executed = ExecutionService().execute(solution_file, sub)
+                executed_results.append(executed)
+                logger.info(f"  ✅ Successfully executed: {filename}")
+            except Exception as e:
+                logger.error(f"  ❌ ERROR executing {filename}: {str(e)}")
+                executed_results.append({
+                    "student_path": sub,
+                    "error": str(e),
+                    "results": []
+                })
+        
         return executed_results
 
     def build_report(self, executed_results: Iterable[dict]) -> Any:
