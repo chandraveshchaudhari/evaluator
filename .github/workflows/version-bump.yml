@@ -1,0 +1,121 @@
+name: Auto Version Bump
+
+# Automatically increment the patch version (0.1.0 -> 0.1.1)
+# when code is pushed to master branch
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'src/**'
+      - 'setup.py'
+      - 'pyproject.toml'
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    name: Bump Version and Create Tag
+    runs-on: ubuntu-latest
+
+    # Skip if commit message contains [skip version] or [skip ci]
+    if: |
+      !contains(github.event.head_commit.message, '[skip version]') &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Get current version
+        id: current_version
+        run: |
+          VERSION=$(grep -oP 'version\s*=\s*"\K[^"]+' pyproject.toml | head -1)
+          echo "Current version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          VERSION="${{ steps.current_version.outputs.version }}"
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "Tag v$VERSION already exists, will bump version"
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag v$VERSION does not exist yet"
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump patch version
+        if: steps.check_tag.outputs.tag_exists == 'true'
+        id: bump
+        run: |
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          echo "Bumping version from $CURRENT to $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update version in pyproject.toml
+        if: steps.check_tag.outputs.tag_exists == 'true'
+        run: |
+          NEW_VERSION="${{ steps.bump.outputs.new_version }}"
+          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
+          echo "Updated pyproject.toml to version $NEW_VERSION"
+
+      - name: Update version in setup.py
+        if: steps.check_tag.outputs.tag_exists == 'true'
+        run: |
+          NEW_VERSION="${{ steps.bump.outputs.new_version }}"
+          sed -i "s/version=\".*\"/version=\"$NEW_VERSION\"/" setup.py
+          echo "Updated setup.py to version $NEW_VERSION"
+
+      - name: Commit version bump
+        if: steps.check_tag.outputs.tag_exists == 'true'
+        run: |
+          NEW_VERSION="${{ steps.bump.outputs.new_version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml setup.py
+          git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
+          git push
+
+      - name: Create and push tag
+        run: |
+          if [ "${{ steps.check_tag.outputs.tag_exists }}" == "true" ]; then
+            VERSION="${{ steps.bump.outputs.new_version }}"
+          else
+            VERSION="${{ steps.current_version.outputs.version }}"
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
+          echo "Created and pushed tag v$VERSION"
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ steps.check_tag.outputs.tag_exists }}" == "true" ]; then
+            VERSION="${{ steps.bump.outputs.new_version }}"
+          else
+            VERSION="${{ steps.current_version.outputs.version }}"
+          fi
+
+          gh release create "v$VERSION" \
+            --title "Release v$VERSION" \
+            --notes "Automated release for version $VERSION" \
+            --repo ${{ github.repository }}
