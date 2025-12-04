@@ -8,13 +8,7 @@ import sys
 
 
 class ComparisonService:
-    """Service for comparing student submissions against expected assertions.
-
-    Executes assertion code in an isolated subprocess sandbox with:
-    - Timeouts (infinite loop protection)
-    - Memory limit (prevents system freeze)
-    - Optional CPU time restriction
-    """
+    """Safe sandbox for running student assertions with optional setup context."""
 
     def __init__(self, timeout=3, memory_limit_mb=512, cpu_time_sec=5, debug=False):
         self.timeout = timeout
@@ -23,88 +17,117 @@ class ComparisonService:
         self.debug = debug
 
     # -------------------------------------------------------------------------
-    def run_assertions(self, student_namespace, assertions, question_name=None, timeout=None):
-        """Run assertions safely with isolation and resource limits."""
+    def run_assertions(self, student_namespace, assertions, question_name=None,
+                       context_code=None, timeout=None):
+        """
+        Run assertions with optional setup context safely in an isolated process.
+        """
         timeout = timeout or self.timeout
         results = []
 
-        for code in assertions:
-            status, err = self._safe_exec_isolated(code, student_namespace, timeout)
-            results.append(
-                {
-                    "question": question_name,
-                    "assertion": code,
-                    "status": status,
-                    "error": err,
-                    "score": 1 if status == "passed" else 0,
-                }
+        # --- Step 1: Execute context/setup code (if any) ---
+        if context_code:
+            ctx_status, ctx_err = self._safe_exec_isolated(
+                code=context_code,
+                namespace=student_namespace,
+                timeout=timeout,
+                label="context setup"
             )
+
+            results.append({
+                "question": question_name,
+                "assertion": "[context setup]",
+                "status": ctx_status,
+                "error": ctx_err,
+                "score": 1 if ctx_status == "passed" else 0,
+            })
+
+            # if setup failed, skip assertions to prevent cascading errors
+            if ctx_status == "failed":
+                return results
+
+        # --- Step 2: Execute assertions ---
+        for code in assertions:
+            status, err = self._safe_exec_isolated(
+                code=code,
+                namespace=student_namespace,
+                timeout=timeout,
+                label="assertion"
+            )
+            results.append({
+                "question": question_name,
+                "assertion": code,
+                "status": status,
+                "error": err,
+                "score": 1 if status == "passed" else 0,
+            })
 
         return results
 
     # -------------------------------------------------------------------------
-    def _safe_exec_isolated(self, code: str, namespace: dict, timeout: int):
-        """Execute assertion inside isolated subprocess with memory + CPU limit."""
+    def _safe_exec_isolated(self, code: str, namespace: dict, timeout: int, label="assertion"):
+        """
+        Execute arbitrary code safely in an isolated subprocess with limits.
+        """
         tmp_path = None
         try:
             with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as tmp:
                 tmp.write("import sys, resource, signal, pandas as pd, numpy as np\n")
 
-                # Apply sandbox resource limits
-                tmp.write(
-                    textwrap.dedent(
-                        f"""
-                # --- Resource limits (active on UNIX) ---
+                # --- Apply resource limits (Linux/macOS only) ---
+                tmp.write(textwrap.dedent(f"""
                 try:
-                    resource.setrlimit(resource.RLIMIT_AS, ({self.memory_limit_mb * 1024 * 1024}, {self.memory_limit_mb * 1024 * 1024}))
-                    resource.setrlimit(resource.RLIMIT_CPU, ({self.cpu_time_sec}, {self.cpu_time_sec}))
+                    # Limit virtual memory
+                    resource.setrlimit(resource.RLIMIT_AS,
+                        ({self.memory_limit_mb * 1024 * 1024}, {self.memory_limit_mb * 1024 * 1024}))
+                    # Limit CPU seconds
+                    resource.setrlimit(resource.RLIMIT_CPU,
+                        ({self.cpu_time_sec}, {self.cpu_time_sec}))
                 except Exception:
                     pass
-                \n
-                """
-                    )
-                )
+                \n"""))
 
-                # Recreate student's namespace
+                # --- Override input() to block waiting ---
+                tmp.write(textwrap.dedent("""
+                __builtins__.input = lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("input() not allowed"))
+                \n"""))
+
+                # --- Restore student's namespace safely ---
                 for k, v in namespace.items():
                     if k.startswith("__"):
                         continue
                     try:
-                        if isinstance(
-                            v, (int, float, str, bool, list, dict, tuple, set, type(None))
-                        ):
+                        if isinstance(v, (int, float, str, bool, list, dict, tuple, set, type(None))):
                             tmp.write(f"{k} = {repr(v)}\n")
                         elif inspect.isfunction(v):
                             src = self._get_function_source(v)
                             if src:
                                 tmp.write(f"\n{textwrap.dedent(src)}\n")
-                        elif "pandas" in sys.modules and "DataFrame" in str(type(v)):
-                            # create placeholder DataFrame (shape only)
-                            shape = getattr(v, "shape", (0, 0))
+                        elif 'pandas' in sys.modules and 'DataFrame' in str(type(v)):
+                            shape = getattr(v, 'shape', (0, 0))
                             tmp.write(f"{k} = pd.DataFrame(np.zeros({shape}))\n")
                     except Exception:
                         continue
 
-                # Add assertion
                 tmp.write("\n" + textwrap.dedent(code) + "\n")
                 tmp_path = tmp.name
 
-            # Execute in subprocess (isolated)
+            # --- Run code inside sandbox ---
             proc = subprocess.run(
-                ["python3", tmp_path], capture_output=True, text=True, timeout=timeout
+                ["python3", tmp_path],
+                capture_output=True,
+                text=True,
+                timeout=timeout
             )
 
             if proc.returncode == 0:
                 return "passed", None
             else:
-                err = proc.stderr.strip() or proc.stdout.strip() or "Assertion failed"
+                err = proc.stderr.strip() or proc.stdout.strip() or f"{label} failed"
                 return "failed", err
 
         except subprocess.TimeoutExpired:
-            return (
-                "failed",
-                f"TimeoutError: exceeded {timeout}s (possible infinite loop or blocking input())",
-            )
+            return "failed", f"TimeoutError: exceeded {timeout}s ({label} - possible infinite loop or input())"
         except Exception:
             return "failed", traceback.format_exc()
         finally:
@@ -113,10 +136,8 @@ class ComparisonService:
 
     # -------------------------------------------------------------------------
     def _get_function_source(self, func):
-        """Safely extract function source code for re-execution."""
+        """Extract clean function source safely."""
         try:
-            import inspect
-
             src = inspect.getsource(func)
             return textwrap.dedent(src)
         except Exception:

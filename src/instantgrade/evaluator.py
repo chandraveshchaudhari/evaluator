@@ -102,39 +102,67 @@ class Evaluator:
         self.submissions = None
         self.executed = None
         self.report = None
-        
+
         # Setup logging with file handler if log_file is provided
         self._setup_logging()
 
+        # Log initialization details
+        logger.info("\n" + "=" * 70)
+        logger.info("🔧 EVALUATOR INITIALIZED")
+        logger.info("=" * 70)
+        logger.info(f"Solution file: {self.solution_file_path}")
+        logger.info(f"Submissions folder: {self.submission_folder_path}")
+        logger.info(f"Config file: {config_json if config_json else 'None (using defaults)'}")
+        logger.info(f"Log file: {self.log_file if self.log_file else 'None (console only)'}")
+        logger.info("=" * 70)
+
     def _setup_logging(self) -> None:
         """Setup logging configuration for the evaluator.
-        
+
         If log_file is specified, adds a file handler to save logs to disk.
         Logs will be saved to both console and file simultaneously.
         """
         if self.log_file:
             # Create parent directories if they don't exist
             self.log_file.parent.mkdir(parents=True, exist_ok=True)
-            
+
+            # Get root logger
+            root_logger = logging.getLogger()
+
+            # Remove existing file handlers to avoid duplicates
+            for handler in root_logger.handlers[:]:
+                if isinstance(handler, logging.FileHandler):
+                    root_logger.removeHandler(handler)
+                    handler.close()
+
             # Create file handler
             file_handler = logging.FileHandler(
                 self.log_file,
                 mode='w',
                 encoding='utf-8'
             )
-            file_handler.setLevel(logging.INFO)
-            
+            file_handler.setLevel(logging.DEBUG)  # Capture all levels
+
             # Create formatter
             formatter = logging.Formatter(
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
             )
             file_handler.setFormatter(formatter)
-            
+
             # Add file handler to root logger
-            root_logger = logging.getLogger()
             root_logger.addHandler(file_handler)
-            
-            logger.info(f"📝 Logging to file: {self.log_file}")
+
+            # Also ensure console handler exists
+            has_console_handler = any(isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+                                     for h in root_logger.handlers)
+            if not has_console_handler:
+                console_handler = logging.StreamHandler()
+                console_handler.setLevel(logging.INFO)
+                console_handler.setFormatter(formatter)
+                root_logger.addHandler(console_handler)
+
+            # Print to console that we're logging
+            print(f"📝 Logging to file: {self.log_file}")
 
     # --- High-level pipelines -------------------------------------------------
     def run(self) -> Any:
@@ -153,21 +181,38 @@ class Evaluator:
         >>> evaluator = Evaluator("solution.ipynb", "submissions/")
         >>> report = evaluator.run()
         """
-        logger.info("=" * 70)
+        logger.info("\n" + "=" * 70)
         logger.info("🚀 STARTING EVALUATION PIPELINE")
         logger.info("=" * 70)
-        logger.info(f"Solution file: {self.solution_file_path}")
-        logger.info(f"Submissions folder: {self.submission_folder_path}")
 
-        submissions = self.load()
-        logger.info(f"✅ Loaded {len(submissions)} submissions")
+        # Phase 1: Load
+        logger.info("\n📂 PHASE 1: LOADING SUBMISSIONS...")
+        try:
+            submissions = self.load()
+            logger.info(f"✅ Successfully loaded {len(submissions)} submissions")
+        except Exception as e:
+            logger.error(f"❌ ERROR during load phase: {str(e)}", exc_info=True)
+            raise
 
-        executed = self.execute_all(submissions)
-        logger.info(f"✅ Executed all {len(executed)} submissions")
+        # Phase 2: Execute
+        logger.info("\n⚙️  PHASE 2: EXECUTING SUBMISSIONS...")
+        try:
+            executed = self.execute_all(submissions)
+            logger.info(f"✅ Successfully executed all submissions")
+        except Exception as e:
+            logger.error(f"❌ ERROR during execute phase: {str(e)}", exc_info=True)
+            raise
 
-        report = self.build_report(executed)
-        logger.info("✅ Built report")
-        logger.info("=" * 70)
+        # Phase 3: Report
+        logger.info("\n📊 PHASE 3: BUILDING REPORT...")
+        try:
+            report = self.build_report(executed)
+            logger.info(f"✅ Successfully built report")
+        except Exception as e:
+            logger.error(f"❌ ERROR during report phase: {str(e)}", exc_info=True)
+            raise
+
+        logger.info("\n" + "=" * 70)
         logger.info("🎉 EVALUATION PIPELINE COMPLETED SUCCESSFULLY")
         logger.info("=" * 70)
 
@@ -188,8 +233,10 @@ class Evaluator:
         >>> submissions = evaluator.load()
         >>> print(f"Found {len(submissions)} submissions")
         """
-        logger.info("\n📂 LOADING SUBMISSIONS...")
-        return IngestionService(self.solution_file_path, self.submission_folder_path)
+        logger.info("→ Calling IngestionService().load()...")
+        ingestion_service = IngestionService(self.solution_file_path, self.submission_folder_path)
+        logger.info(f"  ✅ IngestionService initialized")
+        return ingestion_service
 
     def execute_all(self, submissions: Iterable[Path]) -> List[Any]:
         """Execute all submissions against the instructor solution.
@@ -211,33 +258,36 @@ class Evaluator:
         >>> executed = evaluator.execute_all(submissions)
         >>> print(f"Executed {len(executed)} submissions")
         """
-        logger.info("\n⚙️  EXECUTING SUBMISSIONS...")
+        logger.info("→ Calling ExecutionService.execute()...")
 
         solution_file = submissions.load_solution()
+        logger.info(f"  ✅ Loaded solution from: {solution_file}")
+
         submission_list = list(submissions.list_submissions())
         total_submissions = len(submission_list)
-
-        logger.info(f"Total submissions to evaluate: {total_submissions}")
+        logger.info(f"  ✅ Found {total_submissions} submissions to process")
 
         executed_results: List[Any] = []
 
         for idx, sub in enumerate(submission_list, 1):
             # Extract student info from filename
             filename = sub.name
-            logger.info(f"\n[{idx}/{total_submissions}] 👤 Processing: {filename}")
+            logger.info(f"\n    [{idx}/{total_submissions}] 👤 Processing: {filename}")
 
             try:
+                logger.debug(f"      → Executing submission: {sub}")
                 executed = ExecutionService().execute(solution_file, sub)
                 executed_results.append(executed)
-                logger.info(f"  ✅ Successfully executed: {filename}")
+                logger.info(f"      ✅ Successfully executed: {filename}")
             except Exception as e:
-                logger.error(f"  ❌ ERROR executing {filename}: {str(e)}")
+                logger.error(f"      ❌ ERROR executing {filename}: {str(e)}", exc_info=True)
                 executed_results.append({
                     "student_path": sub,
                     "error": str(e),
                     "results": []
                 })
 
+        logger.info(f"\n→ ExecutionService completed: {len(executed_results)} results collected")
         return executed_results
 
     def build_report(self, executed_results: Iterable[dict]) -> Any:
@@ -260,7 +310,14 @@ class Evaluator:
         >>> executed = evaluator.execute_all(submissions)
         >>> report = evaluator.build_report(executed)
         """
-        return ReportingService(executed_results)
+        logger.info("→ Calling ReportingService()...")
+        try:
+            reporting_service = ReportingService(executed_results)
+            logger.info(f"  ✅ ReportingService initialized successfully")
+            return reporting_service
+        except Exception as e:
+            logger.error(f"  ❌ ERROR initializing ReportingService: {str(e)}", exc_info=True)
+            raise
 
     def save_all_reports(self, report_obj: Any, output_dir: str | Path) -> Path:
         """Save generated reports to disk.

@@ -29,7 +29,7 @@ class ExecutionService:
         against the instructor's structured solution specification.
         """
         logger.info(f"  📓 Loading student notebook: {submission_path.name}")
-        
+
         # 1. Execute student's notebook safely
         executor = NotebookExecutor(timeout=self.timeout)
         try:
@@ -38,7 +38,7 @@ class ExecutionService:
         except Exception as e:
             logger.error(f"    ❌ ERROR executing notebook: {str(e)}")
             raise
-            
+
         base_namespace = student_execution.get("namespace", {})
         logger.info(f"    📊 Namespace variables available: {len(base_namespace)}")
 
@@ -48,7 +48,7 @@ class ExecutionService:
         # 2. Iterate over each question defined in the instructor notebook
         total_questions = len(solution.get("questions", {}))
         logger.info(f"    ❓ Total questions to evaluate: {total_questions}")
-        
+
         for q_idx, (qname, qdata) in enumerate(solution.get("questions", {}).items(), 1):
             context_code = qdata.get("context_code", "")
             assertions = qdata.get("tests", [])
@@ -72,12 +72,12 @@ class ExecutionService:
                     question_name=qname,
                     context_code=context_code,
                 )
-                
+
                 # Count passed/failed
                 passed = sum(1 for r in q_results if r.get("status") == "passed")
                 failed = len(q_results) - passed
                 logger.info(f"        Result: ✅ {passed} passed, ❌ {failed} failed")
-                
+
             except Exception as e:
                 logger.error(f"        ❌ ERROR evaluating question {qname}: {str(e)}")
                 q_results = [{
@@ -95,7 +95,7 @@ class ExecutionService:
             all_results.extend(q_results)
 
         logger.info(f"    ✅ Evaluation complete for {submission_path.name}")
-        
+
         # 4. Return structured evaluation dict
         return {
             "student_path": submission_path,
