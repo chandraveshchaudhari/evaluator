@@ -1,79 +1,40 @@
-import traceback
-
+import threading, traceback
 
 class ComparisonService:
-    """
-    Compares student execution results against instructor-defined assertions.
-    """
+    def run_assertions(self, student_namespace, assertions, question_name=None, timeout=3):
+        results = []
 
-    def run_assertions(
-        self,
-        student_namespace: dict,
-        assertions: list[str],
-        question_name: str | None = None,
-        context_code: str | None = None,
-    ) -> list[dict]:
-        """
-        Execute instructor assertions in the student's namespace.
-
-        Parameters
-        ----------
-        student_namespace : dict
-            Namespace of the student's executed notebook.
-        assertions : list[str]
-            Assertion statements to run.
-        question_name : str, optional
-            Name of the question/function being evaluated.
-        context_code : str, optional
-            Setup code to run once before assertions (imports, data prep, etc.)
-
-        Returns
-        -------
-        list[dict]
-        """
-        results: list[dict] = []
-
-        # 1. Execute setup/context code once
-        if context_code:
+        def safe_exec(code, globals_ns, result_container):
             try:
-                exec(context_code, student_namespace)
+                exec(code, globals_ns)
+                result_container.append(("passed", None))
             except Exception:
-                tb = traceback.format_exc()
-                results.append(
-                    {
-                        "question": question_name or "unknown",
-                        "assertion": "[context setup]",
-                        "status": "failed",
-                        "error": tb,
-                        "score": 0,
-                    }
-                )
-                # If setup fails, we cannot reliably run assertions
-                return results
+                result_container.append(("failed", traceback.format_exc()))
 
-        # 2. Execute each assertion separately
         for code in assertions:
-            try:
-                exec(code, student_namespace)
-                results.append(
-                    {
-                        "question": question_name or "unknown",
-                        "assertion": code,
-                        "status": "passed",
-                        "error": None,
-                        "score": 1,
-                    }
-                )
-            except Exception:
-                tb = traceback.format_exc()
-                results.append(
-                    {
-                        "question": question_name or "unknown",
-                        "assertion": code,
-                        "status": "failed",
-                        "error": tb,
-                        "score": 0,
-                    }
-                )
+            result = []
+            t = threading.Thread(target=safe_exec, args=(code, student_namespace, result))
+            t.daemon = True
+            t.start()
+            t.join(timeout)  # seconds
+
+            if t.is_alive():
+                results.append({
+                    "question": question_name,
+                    "assertion": code,
+                    "status": "failed",
+                    "error": f"TimeoutError: Code exceeded {timeout}s limit (possible infinite loop)",
+                    "score": 0
+                })
+                continue
+
+            status, err = result[0] if result else ("failed", "Unknown execution failure")
+            results.append({
+                "question": question_name,
+                "assertion": code,
+                "status": status,
+                "error": err,
+                "score": 1 if status == "passed" else 0
+            })
 
         return results
