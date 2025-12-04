@@ -1,9 +1,10 @@
 name: Publish Python Package to PyPI
 
-# This workflow publishes your package when:
-# 1. A GitHub Release is published, OR
-# 2. A version tag (e.g., v1.0.0) is pushed, OR
-# 3. Manually triggered via workflow_dispatch
+# This workflow publishes your package automatically when:
+# 1. A GitHub Release is published
+# 2. A version tag (e.g., v1.0.0) is pushed
+# 3. Triggered by version-bump workflow
+# 4. Manually triggered via workflow_dispatch
 
 on:
   release:
@@ -16,11 +17,17 @@ on:
       version:
         description: 'Version to publish (optional, uses latest tag if not provided)'
         required: false
+  workflow_run:
+    workflows: ["Auto Version Bump"]
+    types: [completed]
 
 jobs:
   publish:
     name: Build and Publish to PyPI
     runs-on: ubuntu-latest
+
+    # Skip if version bump workflow failed
+    if: github.event.workflow_run.conclusion != 'failure' || github.event_name != 'workflow_run'
 
     # Required for OIDC Trusted Publishing (no token needed)
     permissions:
