@@ -15,10 +15,16 @@ class ReportingService:
         executed_results: list[dict] | None = None,
         solution: dict | None = None,
         debug: bool = False,
+        logger=None,
     ):
         self.debug = debug
         self.solution = solution or {}
+        self.logger = logger              # <-- assign before using
         self.df: pd.DataFrame | None = self.dataframe(executed_results)
+
+        if self.logger:
+            self.logger.info(f"[Reporting] Processed {len(self.df)} result rows.")
+
 
     # -------------------------------------------------------------------------
     def _get_max_scores_from_solution(self):

@@ -1,335 +1,169 @@
-"""Orchestrator for the evaluation pipeline.
+"""
+Evaluator — The orchestrator for the entire grading pipeline.
 
-This module exposes an `Evaluator` class that coordinates ingestion,
-execution, comparison and reporting. The implementation below focuses on
-clarity and small, testable steps. Methods are implemented as thin
-wrappers around the respective service classes so they can be mocked in
-tests or replaced via dependency injection.
+Responsibilities:
+  1. Ingest instructor solution
+  2. Discover student submissions
+  3. Delegate grading to the appropriate execution backend
+     (Docker or local)
+  4. Collect, consolidate, and report results
 """
 
-from __future__ import annotations
-
+import time
 from pathlib import Path
-from typing import Iterable, List, Any
+from typing import List, Dict, Any
 
-from instantgrade.ingestion.ingestion_service import IngestionService
-from instantgrade.execution.execution_service import ExecutionService
+from instantgrade.ingestion.solution_ingestion import SolutionIngestion
 from instantgrade.reporting.reporting_service import ReportingService
-
-import json
-
 from instantgrade.utils.logger import setup_logger
+from instantgrade.execution.execution_service_docker import ExecutionServiceDocker
+from instantgrade.execution.notebook_executor import NotebookExecutor
 
 
 class Evaluator:
-    """Orchestrator for the evaluation pipeline.
-
-    The Evaluator class coordinates the entire evaluation workflow by managing
-    ingestion, execution, comparison, and reporting services. It provides both
-    high-level methods for running the complete pipeline and granular methods
-    for controlling individual steps.
+    """
+    The main orchestrator class responsible for grading workflows.
 
     Parameters
     ----------
     solution_file_path : str or Path
-        Path to the instructor's solution file (notebook or Excel).
+        Path to instructor's reference solution notebook.
     submission_folder_path : str or Path
-        Path to the folder containing student submission files.
-    config_json : str or Path, optional
-        Path to a JSON configuration file for customizing evaluation behavior.
-        Default is None.
-
-    Attributes
-    ----------
-    solution_file_path : Path
-        Resolved path to the solution file.
-    submission_folder_path : Path
-        Resolved path to the submissions folder.
-    config : dict or None
-        Loaded configuration dictionary if config_json was provided.
-    submissions : Any
-        Cached submissions loaded by the ingestion service.
-    executed : Any
-        Cached execution results.
-    report : Any
-        Cached report object.
-
-    Examples
-    --------
-    >>> from instantgrade import Evaluator
-    >>> evaluator = Evaluator(
-    ...     solution_file_path="solution.ipynb",
-    ...     submission_folder_path="submissions/",
-    ... )
-    >>> report = evaluator.run()
-
-    >>> # Granular control
-    >>> submissions = evaluator.load()
-    >>> executed = evaluator.execute_all(submissions)
-    >>> report = evaluator.build_report(executed)
+        Folder containing all student notebooks.
+    use_docker : bool, optional
+        Whether to use Docker-based isolated grading (default=True).
+    parallel_workers : int, optional
+        Number of parallel workers for future extensions (default=1).
+    log_path : str, optional
+        Path to directory for saving logs.
+    log_level : str, optional
+        Logging verbosity ("debug", "normal", "silent").
     """
+
     def __init__(
         self,
         solution_file_path: str | Path,
         submission_folder_path: str | Path,
-        config_json: str | Path | None = None,
-        log_path: str | Path | None = None,          # NEW
-        log_level: str = "normal",                   # NEW: minimal, normal, verbose, debug
-    ) -> None:
-        self.solution_file_path = Path(solution_file_path)
-        self.submission_folder_path = Path(submission_folder_path)
-        self.config = None
-
-        if config_json is not None:
-            config_path = Path(config_json)
-            if config_path.exists():
-                with open(config_path, "r", encoding="utf8") as f:
-                    self.config = json.load(f)
-
-        # Setup logger
-        self.logger = setup_logger(log_dir=log_path, level=log_level)
-        self.logger.info("Evaluator initialized.")
-        self.logger.debug(f"Solution path: {self.solution_file_path}")
-        self.logger.debug(f"Submission folder: {self.submission_folder_path}")
-
-        self.submissions = None
-        self.executed = None
+        use_docker: bool = True,
+        parallel_workers: int = 1,
+        log_path: str | Path = "./logs",
+        log_level: str = "normal",
+    ):
+        self.solution_path = Path(solution_file_path)
+        self.submission_path = Path(submission_folder_path)
+        self.use_docker = use_docker
+        self.parallel_workers = parallel_workers
+        self.log_path = Path(log_path)
+        self.log_path.mkdir(exist_ok=True, parents=True)
+        self.logger = setup_logger(level=log_level)
         self.report = None
+        self.executed = []
 
-
-    # --- High-level pipelines -------------------------------------------------
-    def run(self) -> Any:
-        """Run the full evaluation pipeline.
-
-        Executes the complete workflow: loads submissions, executes them against
-        the solution, compares results, and generates a report.
-
-        Returns
-        -------
-        Any
-            The generated report object from the reporting service.
-
-        Examples
-        --------
-        >>> evaluator = Evaluator("solution.ipynb", "submissions/")
-        >>> report = evaluator.run()
-        """
-
+    # ------------------------------------------------------------------
+    def run(self) -> ReportingService:
+        """Run the full evaluation pipeline."""
         self.logger.info("Starting evaluation pipeline...")
 
-        try:
-            submissions = self.load()
-            self.logger.info(f"Loaded {len(submissions.list_submissions())} submissions")
+        start_time = time.time()
+        # 1. Load solution
+        self.logger.info("Loading instructor solution...")
+        solution_service = SolutionIngestion(self.solution_path)
+        self.solution = solution_service.understand_notebook_solution()
+        self.logger.info(f"Loaded {len(self.solution['questions'])} questions.")
 
-            executed = self.execute_all(submissions)
-            self.logger.info("Execution phase completed successfully")
+        # 2. Discover student submissions
+        all_submissions = sorted(
+            [f for f in self.submission_path.glob("*.ipynb") if f.is_file()]
+        )
+        if not all_submissions:
+            raise FileNotFoundError(f"No student notebooks found in {self.submission_path}")
 
-            report = self.build_report(executed)
-            self.logger.info("Report generation complete")
+        self.logger.info(f"Discovered {len(all_submissions)} submissions to grade.")
 
-            return report
+        # 3. Execute grading
+        executed = self.execute_all(all_submissions)
+        self.executed = executed
+        self.logger.info("Execution phase completed successfully.")
 
-        except Exception as e:
-            self.logger.exception(f"Pipeline failed: {e}")
-            raise
+        # 4. Build report
+        self.report = ReportingService(executed, logger=self.logger)
+        self.logger.info("Report generation complete.")
 
+        elapsed = round(time.time() - start_time, 2)
+        self.logger.info(f"Total evaluation completed in {elapsed}s.")
 
-    # --- Sub-parts exposed for granular control -------------------------------
-    def load(self) -> List[Path]:
-        """Load submission files using the ingestion service.
+        return self.report
 
-        Returns
-        -------
-        list of Path
-            List of submission file paths found in the submission folder.
-
-        Examples
-        --------
-        >>> evaluator = Evaluator("solution.ipynb", "submissions/")
-        >>> submissions = evaluator.load()
-        >>> print(f"Found {len(submissions)} submissions")
-        """
-
-        return IngestionService(self.solution_file_path, self.submission_folder_path)
-
-    def execute_all(self, submissions: Iterable[Path]) -> List[Any]:
-        """Execute all submissions against the instructor solution.
-
-        Parameters
-        ----------
-        submissions : Iterable of Path
-            Collection of submission file paths to execute.
-
-        Returns
-        -------
-        list of Any
-            List of executed result objects. The execution service determines
-            the specific structure of each result object.
-
-        Examples
-        --------
-        >>> submissions = evaluator.load()
-        >>> executed = evaluator.execute_all(submissions)
-        >>> print(f"Executed {len(executed)} submissions")
-        """
-        self.logger.info("Executing all student submissions...")
-        executed_results = []
-
-        solution_file = submissions.load_solution()
-
-        for sub in submissions.list_submissions():
-            self.logger.debug(f"Running: {sub}")
-            try:
-                result = ExecutionService().execute(solution_file, sub)
-                executed_results.append(result)
-                self.logger.info(f"✅ {sub.name} executed successfully")
-            except Exception as e:
-                self.logger.warning(f"⚠️  Error executing {sub.name}: {e}")
-        return executed_results
-
-
-    def build_report(self, executed_results: Iterable[dict]) -> Any:
-        """Build a report from execution results.
-
-        Delegates to the reporting service to generate final output reports.
-
-        Parameters
-        ----------
-        executed_results : Iterable of dict
-            Collection of execution result dictionaries to include in the report.
-
-        Returns
-        -------
-        Any
-            The report object generated by the reporting service.
-
-        Examples
-        --------
-        >>> executed = evaluator.execute_all(submissions)
-        >>> report = evaluator.build_report(executed)
-        """
-        return ReportingService(executed_results)
-
-    def to_html(self, path: str | Path | None = None) -> str:
-        """Convert the report to HTML format.
-
-        Returns
-        -------
-        str
-            The HTML representation of the report.
-
-        Examples
-        --------
-        >>> report = evaluator.build_report(executed)
-        >>> html_output = evaluator.to_html()
-        """
-        if self.report is None:
-            raise ValueError("Report has not been built yet. Call build_report() first.")
-        return self.report.to_html(path)
-
-    def save_all_reports(self, report_obj: Any, output_dir: str | Path) -> Path:
-        """Save generated reports to disk.
-
-        Persists the report object(s) to the specified output directory. The
-        method delegates to the reporting service when available, otherwise
-        attempts a best-effort save.
-
-        Parameters
-        ----------
-        report_obj : Any
-            The report object to save, typically from build_report().
-        output_dir : str or Path
-            Target directory for saving reports. Created if it doesn't exist.
-
-        Returns
-        -------
-        Path
-            The resolved output directory path where reports were saved.
-
-        Examples
-        --------
-        >>> report = evaluator.run()
-        >>> output_path = evaluator.save_all_reports(report, "reports/")
-        >>> print(f"Reports saved to {output_path}")
-        """
-        out = Path(output_dir)
-        out.mkdir(parents=True, exist_ok=True)
-        # If reporting service exposes a save_all, use it; otherwise try simple JSON/CSV export
-        if hasattr(self.reporting, "save_all"):
-            self.reporting.save_all(report_obj, out)
+    # ------------------------------------------------------------------
+    def execute_all(self, submission_paths: List[Path]) -> List[Dict[str, Any]]:
+        """Run grading across all students sequentially or in future parallel mode."""
+        if self.use_docker:
+            self.logger.info("Starting Docker-based evaluation pipeline...")
+            execution_service = ExecutionServiceDocker(logger=self.logger)
         else:
-            # best-effort: attempt to persist via ReportBuilder if available
+            self.logger.info("Starting Local evaluation pipeline...")
+            execution_service = NotebookExecutor(timeout=120)
+
+        results = []
+
+        for idx, sub in enumerate(submission_paths, start=1):
+            self.logger.info(f"[{idx}/{len(submission_paths)}] Grading: {sub.name}")
+
             try:
-                rb = ReportingService()
-                rb.build(report_obj).to_csv(out / "report.csv")
-            except Exception:
-                # swallow -- saving is optional and environment-specific
-                pass
-        return out
+                if self.use_docker:
+                    result = execution_service.execute_student(self.solution_path, sub)
+                else:
+                    result = self._grade_local_student(execution_service, sub)
+                results.append(result)
+            except Exception as e:
+                self.logger.exception(f"Fatal error grading {sub.name}: {e}")
+                results.append({
+                    "student_path": sub,
+                    "execution": {
+                        "success": False,
+                        "errors": [str(e)],
+                        "student_meta": {"name": "Unknown", "roll_number": "Unknown"},
+                    },
+                    "results": [],
+                })
 
-    def summary(self, comparison_results: Iterable[dict]) -> dict:
-        """Generate a summary of comparison results.
+        return results
 
-        Calculates aggregate statistics such as total submission count and
-        average score. This is useful for quick CLI/CI checks.
+    # ------------------------------------------------------------------
+    def _grade_local_student(self, executor: NotebookExecutor, submission_path: Path) -> Dict[str, Any]:
+        """Simplified fallback for local grading without Docker."""
+        self.logger.info(f"[Local] Grading {submission_path.name}")
 
-        Parameters
-        ----------
-        comparison_results : Iterable of dict
-            Collection of comparison result dictionaries, each potentially
-            containing a 'score' key.
+        exec_result = executor.run_notebook(submission_path)
+        ns = exec_result.get("namespace", {})
+        name = ns.get("name", "Unknown")
+        roll = ns.get("roll_number", "Unknown")
 
-        Returns
-        -------
-        dict
-            Summary dictionary with keys:
-            - 'total_submissions' : int
-                Total number of submissions processed.
-            - 'average_score' : float or None
-                Average score across all submissions with scores, or None
-                if no scores were found.
+        return {
+            "student_path": submission_path,
+            "execution": {
+                "success": True,
+                "errors": [],
+                "student_meta": {"name": name, "roll_number": roll},
+            },
+            "results": [],
+        }
 
-        Examples
-        --------
-        >>> results = evaluator.run()
-        >>> summary = evaluator.summary(results)
-        >>> print(f"Average: {summary['average_score']:.1f}")
-        """
-        rows = list(comparison_results)
-        total = len(rows)
-        score_sum = 0.0
-        scored = 0
-        for r in rows:
-            s = r.get("score") if isinstance(r, dict) else None
-            if isinstance(s, (int, float)):
-                score_sum += s
-                scored += 1
-        avg = (score_sum / scored) if scored else None
-        return {"total_submissions": total, "average_score": avg}
+    # ------------------------------------------------------------------
+    def to_html(self, path: str | Path):
+        """Generate HTML report for the graded results."""
+        if self.report is None:
+            raise RuntimeError("No report available. Run Evaluator.run() first.")
+        path = Path(path)
+        self.report.to_html(path)
+        self.logger.info(f"HTML report generated at: {path}")
+        return str(path)
 
-    def debug_mode(self, enabled: bool = True) -> None:
-        """Toggle debug mode for evaluation services.
-
-        Enables or disables debug mode for all services that support it
-        (ingestion, execution, comparison, reporting). Services without
-        debug support are silently skipped.
-
-        Parameters
-        ----------
-        enabled : bool, default=True
-            Whether to enable (True) or disable (False) debug mode.
-
-        Examples
-        --------
-        >>> evaluator = Evaluator("solution.ipynb", "submissions/")
-        >>> evaluator.debug_mode(True)  # Enable detailed logging
-        >>> report = evaluator.run()
-        """
-        if hasattr(self.ingestion, "debug"):
-            setattr(self.ingestion, "debug", enabled)
-        if hasattr(self.execution, "debug"):
-            setattr(self.execution, "debug", enabled)
-        if hasattr(self.comparison, "debug"):
-            setattr(self.comparison, "debug", enabled)
-        if hasattr(self.reporting, "debug"):
-            setattr(self.reporting, "debug", enabled)
+    # ------------------------------------------------------------------
+    def summary(self, all_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Generate quick text summary statistics from graded results."""
+        total = len(all_results)
+        passed = sum(
+            1 for r in all_results if r.get("execution", {}).get("success", False)
+        )
+        return {"total": total, "passed": passed, "failed": total - passed}

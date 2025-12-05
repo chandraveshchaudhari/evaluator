@@ -232,22 +232,5 @@ class IngestionService:
 
         raise ValueError(f"Unsupported solution format: {solution_path.suffix}")
 
-    def load_answer_key(self, answer_key_path):
-        """Load an answer key from the given path."""
-        # ...implementation...
-        pass
 
-    def validate_file(self, path):
-        """Validate a file (extension, structure, etc)."""
-        # ...implementation...
-        pass
 
-    def validate_folder(self, folder_path):
-        """Validate a folder (structure, required files, etc)."""
-        # ...implementation...
-        pass
-
-    def extract_student_metadata(self, path):
-        """Extract student metadata from a submission file path."""
-        # ...implementation...
-        pass
