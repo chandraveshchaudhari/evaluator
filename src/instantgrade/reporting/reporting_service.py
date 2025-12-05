@@ -7,7 +7,7 @@ import html as html_lib
 class ReportingService:
     """
     Service for building, summarizing, and exporting grouped student evaluation reports.
-    Uses instructor solution data for total marks (assert count per question).
+    Uses total_assertions (from instructor notebook) for total marks.
     """
 
     def __init__(
@@ -16,13 +16,13 @@ class ReportingService:
         solution: dict | None = None,
         debug: bool = False,
         logger=None,
-        total_questions: int = 0,
+        total_assertions: int = 0,
     ):
         self.debug = debug
         self.solution = solution or {}
         self.executed_results = executed_results or []
         self.logger = logger
-        self.total_questions = total_questions
+        self.total_assertions = total_assertions or 1  # avoid division by zero
         self.df: pd.DataFrame | None = self.dataframe(self.executed_results)
 
         if self.logger:
@@ -30,9 +30,7 @@ class ReportingService:
 
     # -------------------------------------------------------------------------
     def dataframe(self, executed_results: list[dict] = None) -> pd.DataFrame:
-        """
-        Flatten all evaluation results into a DataFrame and align with instructor totals.
-        """
+        """Flatten all evaluation results into a DataFrame."""
         all_rows = []
         for item in executed_results or []:
             student_path = Path(item.get("student_path", ""))
@@ -72,10 +70,9 @@ class ReportingService:
             self.df = pd.DataFrame()
             return self.df
 
-        # Add instructor total from solution ingestion
-        total_assertions = self.total_questions
-        df["max_score"] = 1  # each assertion = 1 mark
-        df["total_possible"] = total_assertions
+        # Each assertion counts as 1 mark
+        df["max_score"] = 1
+        df["total_possible"] = self.total_assertions
         df["percentage"] = (df["score"] / df["max_score"]) * 100
         self.df = df
         return df
@@ -91,20 +88,20 @@ class ReportingService:
 
     # -------------------------------------------------------------------------
     def to_html(self, path):
-        """
-        Generate an interactive HTML report:
-        - Sortable and filterable by marks, name, roll, file
-        - Excludes `[missing student identity]` rows in dropdowns/summary
-        """
+        """Generate an interactive HTML report with filters."""
         if self.df is None:
             raise RuntimeError("Report not built yet.")
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        # --- Exclude missing identity rows for UI ---
-        df_summary = self.df[self.df["assertion"] != "[missing student identity]"].copy()
+        df = self.df.copy()
+        # Include all rows for DataFrame completeness
+        df_filtered = df.copy()
 
-        grouped = df_summary.groupby(["file", "student", "roll_number"])
+        # Filter out missing-identity rows for name/roll dropdowns and summary only
+        df_summary = df[df["assertion"] != "[missing student identity]"].copy()
+
+        grouped = df_filtered.groupby(["file", "student", "roll_number"])
         html_out = StringIO()
 
         html_out.write("""
@@ -122,7 +119,6 @@ class ReportingService:
             .passed { background-color: #e6ffe6; }
             .failed { background-color: #ffe6e6; }
             .summary { margin-top: 5px; font-weight: bold; color: #333; }
-            .hidden { display: none; }
 
             #summaryModal {
                 display: none;
@@ -184,7 +180,7 @@ class ReportingService:
                         case "name": return nameA.localeCompare(nameB);
                         case "roll": return rollA.localeCompare(rollB);
                         case "file": return fileA.localeCompare(fileB);
-                        case "default": return nameA === "student name" ? 1 : -1;
+                        default: return 0;
                     }
                 });
                 blocks.forEach(b => container.appendChild(b));
@@ -207,7 +203,6 @@ class ReportingService:
             <option value="name">Student Name (A–Z)</option>
             <option value="roll">Roll Number (A–Z)</option>
             <option value="file">File Name (A–Z)</option>
-            <option value="default">Default (Student Name Last)</option>
         </select>
 
         <button onclick="showSummary()">Show Summary</button>
@@ -217,12 +212,10 @@ class ReportingService:
             <option value="">-- All Students --</option>
         """)
 
-        # Student dropdown
         for student in sorted(df_summary["student"].unique()):
             html_out.write(f"<option value='{html_lib.escape(student)}'>{html_lib.escape(student)}</option>")
         html_out.write("</select>")
 
-        # Roll dropdown
         html_out.write("""
         <label for="rollSelect">Roll:</label>
         <select id="rollSelect" onchange="filterReports()">
@@ -232,21 +225,19 @@ class ReportingService:
             html_out.write(f"<option value='{html_lib.escape(str(roll))}'>{html_lib.escape(str(roll))}</option>")
         html_out.write("</select>")
 
-        # File dropdown
         html_out.write("""
         <label for="fileSelect">File:</label>
         <select id="fileSelect" onchange="filterReports()">
             <option value="">-- All Files --</option>
         """)
-        for file in sorted(Path(f).name for f in df_summary["file"].unique()):
+        for file in sorted(Path(f).name for f in df["file"].unique()):  # includes missing identity
             html_out.write(f"<option value='{html_lib.escape(file)}'>{html_lib.escape(file)}</option>")
         html_out.write("</select><hr><div id='reportContainer'>")
 
-        # --- Individual student sections ---
-        instructor_total = self.solution.get("summary", {}).get("total_assertions", 0) or 1
+        # --- Student sections ---
         for (file, student, roll_number), g in grouped:
             total_score = g["score"].sum()
-            total_possible = instructor_total
+            total_possible = self.total_assertions
             percentage = round((total_score / total_possible) * 100, 2)
 
             html_out.write(
@@ -265,9 +256,7 @@ class ReportingService:
                 desc = subdf["description"].iloc[0] if "description" in subdf.columns else ""
                 if desc:
                     html_out.write(f'<div class="description">{html_lib.escape(desc)}</div>')
-                html_out.write(
-                    "<table><thead><tr><th>Assertion</th><th>Status</th><th>Score</th><th>Error</th></tr></thead><tbody>"
-                )
+                html_out.write("<table><thead><tr><th>Assertion</th><th>Status</th><th>Score</th><th>Error</th></tr></thead><tbody>")
                 for _, row in subdf.iterrows():
                     row_class = "passed" if row["status"] == "passed" else "failed"
                     html_out.write(
@@ -279,7 +268,7 @@ class ReportingService:
                 html_out.write("</tbody></table></div>")
             html_out.write("</div>")
 
-        # --- Summary modal ---
+        # --- Summary modal (exclude missing identity) ---
         html_out.write("""
         </div><div id="overlay" onclick="closeSummary()"></div>
         <div id="summaryModal">
@@ -296,7 +285,7 @@ class ReportingService:
             .agg(total_score=("score", "sum"))
             .reset_index()
         )
-        summary["max_score"] = instructor_total
+        summary["max_score"] = self.total_assertions
         summary["percentage"] = (summary["total_score"] / summary["max_score"] * 100).fillna(0)
         for _, row in summary.iterrows():
             html_out.write(

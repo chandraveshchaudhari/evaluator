@@ -86,7 +86,7 @@ class Evaluator:
         self.logger.info("Execution phase completed successfully.")
 
         # 4. Build report
-        self.report = ReportingService(executed, logger=self.logger)
+        self.report = ReportingService(executed, logger=self.logger, total_assertions=self.solution["summary"]["total_assertions"])
         self.logger.info("Report generation complete.")
 
         elapsed = round(time.time() - start_time, 2)
