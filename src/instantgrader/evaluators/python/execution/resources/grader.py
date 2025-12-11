@@ -33,8 +33,8 @@ from typing import Any, Dict, List, Tuple
 
 import nbformat
 
-from instantgrader.evaluators.python.ingestion.solution_ingestion import SolutionIngestion
-from instantgrader.evaluators.python.comparison.comparison_service import ComparisonService
+from instantgrade.evaluators.python.ingestion.solution_ingestion import SolutionIngestion
+from instantgrade.evaluators.python.comparison.comparison_service import ComparisonService
 
 
 def log(msg: str) -> None:

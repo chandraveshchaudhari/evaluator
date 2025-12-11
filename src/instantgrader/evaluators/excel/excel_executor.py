@@ -1,4 +1,4 @@
-"""Minimal Excel executor for the new instantgrader architecture.
+"""Minimal Excel executor for the new instantgrade architecture.
 
 This is a lightweight stub that can be expanded later. It does not
 modify any src/instantgrade files.

@@ -1,4 +1,4 @@
-"""IO utilities copied into the new instantgrader package.
+"""IO utilities copied into the new instantgrade package.
 
 Copied from src/instantgrade/utils/io_utils.py and kept unchanged.
 """

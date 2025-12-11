@@ -89,8 +89,8 @@ setup(
     entry_points={
         "console_scripts": [
             # console command kept as 'instantgrade' but point to the
-            # actual importable package (instantgrader) used in src/
-            "instantgrade=instantgrader.cli.main:cli",
+            # actual importable package (instantgrade) used in src/
+            "instantgrade=instantgrade.cli.main:cli",
         ],
     },
 

@@ -3,9 +3,9 @@ import os
 import shutil
 import copy
 import traceback
-from instantgrader.evaluators.python.notebook_executor import NotebookExecutor
-from instantgrader.evaluators.python.comparison.comparison_service import ComparisonService
-from instantgrader.utils.logger import setup_logger
+from instantgrade.evaluators.python.notebook_executor import NotebookExecutor
+from instantgrade.evaluators.python.comparison.comparison_service import ComparisonService
+from instantgrade.utils.logger import setup_logger
 
 
 class ExecutionService:
@@ -46,7 +46,7 @@ class ExecutionService:
 
         if file_type == "notebook":
             if self.use_docker:
-                from instantgrader.evaluators.python.execution_service_docker import ExecutionServiceDocker
+                from instantgrade.evaluators.python.execution_service_docker import ExecutionServiceDocker
                 executor = ExecutionServiceDocker(timeout=self.timeout, debug=self.debug, logger=self.logger)
                 return executor.execute_student(solution, submission_path)
             else:

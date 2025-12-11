@@ -1,4 +1,4 @@
-"""Top-level package for the new instantgrader architecture.
+"""Top-level package for the new instantgrade architecture.
 
 This package is a skeleton used during an incremental migration.
 """

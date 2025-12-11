@@ -24,9 +24,9 @@ class ColorFormatter(logging.Formatter):
 def setup_logger(level="normal", log_dir="./logs"):
     log_dir = Path(log_dir)
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_file = log_dir / "instantgrader.log"
+    log_file = log_dir / "instantgrade.log"
 
-    logger = logging.getLogger("instantgrader")
+    logger = logging.getLogger("instantgrade")
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
 

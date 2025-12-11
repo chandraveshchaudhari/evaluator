@@ -12,11 +12,11 @@ import time
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 
-from instantgrader.evaluators.python.ingestion.solution_ingestion import SolutionIngestion
-from instantgrader.reporting.reporting_service import ReportingService
-from instantgrader.utils.logger import setup_logger
-from instantgrader.evaluators.python.execution_service_docker import ExecutionServiceDocker
-from instantgrader.evaluators.python.notebook_executor import NotebookExecutor
+from instantgrade.evaluators.python.ingestion.solution_ingestion import SolutionIngestion
+from instantgrade.reporting.reporting_service import ReportingService
+from instantgrade.utils.logger import setup_logger
+from instantgrade.evaluators.python.execution_service_docker import ExecutionServiceDocker
+from instantgrade.evaluators.python.notebook_executor import NotebookExecutor
 
 
 class Evaluator:
@@ -205,7 +205,7 @@ class Evaluator:
         roll = ns.get("roll_number", "Unknown")
 
         # Now run assertions using ComparisonService for each question
-        from instantgrader.evaluators.python.comparison.comparison_service import ComparisonService
+        from instantgrade.evaluators.python.comparison.comparison_service import ComparisonService
 
         comparison_svc = ComparisonService()
 

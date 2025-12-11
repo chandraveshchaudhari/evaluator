@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 import importlib.util
 
-from instantgrader.utils.logger import setup_logger
+from instantgrade.utils.logger import setup_logger
 
 
 class ExecutionServiceDocker:
@@ -23,7 +23,7 @@ class ExecutionServiceDocker:
 
     def __init__(
         self,
-        docker_image: str = "instantgrader:latest",
+        docker_image: str = "instantgrade:latest",
         base_image: str = "python:3.11-slim",
         per_question_timeout: int = 20,
         per_student_timeout: int = 1800,
@@ -167,7 +167,7 @@ class ExecutionServiceDocker:
     # ------------------------------------------------------------------
     def ensure_docker_image_exists(self, force_rebuild: bool = False):
         """
-        Ensure the Docker image exists and includes the instantgrader package.
+        Ensure the Docker image exists and includes the instantgrade package.
         Automatically rebuilds if missing or explicitly forced.
         """
         import importlib.util
@@ -179,7 +179,7 @@ class ExecutionServiceDocker:
         env_force = False
         try:
             import os as _os
-            env_force = _os.environ.get("INSTANTGRADER_FORCE_REBUILD", "0") == "1"
+            env_force = _os.environ.get("instantgrade_FORCE_REBUILD", "0") == "1"
         except Exception:
             env_force = False
 
@@ -192,13 +192,13 @@ class ExecutionServiceDocker:
         self.logger.info(f"[Docker] Building image {self.docker_image} from {self.base_image}...")
 
         # ----------------------------------------------------------------------
-        # 1. Locate instantgrader package source
+        # 1. Locate instantgrade package source
         # ----------------------------------------------------------------------
-        spec = importlib.util.find_spec("instantgrader")
+        spec = importlib.util.find_spec("instantgrade")
         if not spec or not spec.origin:
-            raise RuntimeError("Could not locate 'instantgrader' package on host.")
+            raise RuntimeError("Could not locate 'instantgrade' package on host.")
 
-        package_root = Path(spec.origin).parent.parent        # /src/instantgrader/ → /src
+        package_root = Path(spec.origin).parent.parent        # /src/instantgrade/ → /src
         project_root = package_root.parent                    # /evaluator (repo root)
 
         # Determine installation method
@@ -220,7 +220,7 @@ RUN pip install --no-cache-dir nbformat nbclient pandas openpyxl
 COPY . /app
 WORKDIR /app
 
-# Install instantgrader either from pyproject or /src
+# Install instantgrade either from pyproject or /src
 RUN {install_cmd}
 
 # Ensure PYTHONPATH includes /app/src (escape $ for BuildKit variable parsing)
@@ -257,7 +257,7 @@ WORKDIR /workspace
     def _get_grader_source(self) -> Path:
         """Return path to grader.py, with fallback for local dev."""
         import importlib.util
-        spec = importlib.util.find_spec("instantgrader.evaluators.python.execution.resources")
+        spec = importlib.util.find_spec("instantgrade.evaluators.python.execution.resources")
         if spec and spec.origin:
             path = Path(spec.origin).parent / "grader.py"
             if path.exists():
@@ -269,7 +269,7 @@ WORKDIR /workspace
             return local_path
 
         raise RuntimeError(
-            "grader.py not found in instantgrader/execution/resources. "
+            "grader.py not found in instantgrade/execution/resources. "
             "Ensure it exists and package_data includes it."
         )
 

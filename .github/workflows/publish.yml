@@ -55,6 +55,6 @@ jobs:
           echo "Installing package from PyPI..."
           pip install instantgrade
           # The installed distribution is named 'instantgrade' but the
-          # top-level package in this repo is `instantgrader` (note the
+          # top-level package in this repo is `instantgrade` (note the
           # extra 'r'). Import the package correctly for verification.
-          python -c "from instantgrader import Evaluator; print('✅ Package installed successfully!')"
+          python -c "from instantgrade import Evaluator; print('✅ Package installed successfully!')"
