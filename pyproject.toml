@@ -65,7 +65,7 @@ Repository = "https://github.com/chandraveshchaudhari/instantgrade"
 Changelog = "https://github.com/chandraveshchaudhari/instantgrade/releases"
 
 [project.scripts]
-instantgrade = "instantgrade.cli.main:cli"
+instantgrade = "instantgrader.cli.main:cli"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
