@@ -54,4 +54,7 @@ jobs:
           sleep 60
           echo "Installing package from PyPI..."
           pip install instantgrade
-          python -c "from instantgrade import Evaluator; print('✅ Package installed successfully!')"
+          # The installed distribution is named 'instantgrade' but the
+          # top-level package in this repo is `instantgrader` (note the
+          # extra 'r'). Import the package correctly for verification.
+          python -c "from instantgrader import Evaluator; print('✅ Package installed successfully!')"
