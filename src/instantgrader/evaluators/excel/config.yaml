@@ -1,0 +1,3 @@
+# Minimal config placeholder for Excel evaluator
+evaluator: excel
+timeout: 60
