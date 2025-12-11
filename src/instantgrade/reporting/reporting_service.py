@@ -1,25 +1,16 @@
 """
-ReportingService (final, option B - Full original UI + clean errors + beautified UI)
+ReportingService (Full updated version)
 
-Replace your existing reporting service file with this one.
 Features:
- - Restores all original UI controls (sort, student/roll/file filters, summary modal)
- - Adds a Dark Mode toggle
- - Adds collapsible question blocks
- - Keeps Best-N and scaled marks logic unchanged
- - Preserves multi-line, preformatted, HTML-friendly error boxes (no traceback leaks)
- - Responsive, improved styles while keeping original behavior
- - Backwards-compatible with the evaluator 'executed_results' structure used previously
-
-Usage:
-    svc = ReportingService(
-        executed_results=executed_results,
-        total_assertions=15,
-        best_n=10,
-        scaled_range=(10,20),
-        debug=False
-    )
-    svc.to_html("report.html")
+ - Best-N and scaling are optional:
+     * If best_n is None or 0, Best-N logic is disabled.
+     * If scaled_range is None, scaling is disabled.
+ - Summary modal sorts students in ascending order by the displayed metric:
+     * If Best-N enabled -> sort ascending by Highest Best-N
+     * Otherwise -> sort ascending by raw total marks
+ - HTML hides Best-N / Scaled columns & pills automatically when those features are disabled
+ - Backwards-compatible with previous 'executed_results' structure
+ - Preserves error escaping and preformatted error display
 """
 
 import html as html_lib
@@ -38,16 +29,27 @@ class ReportingService:
         debug: bool = False,
         logger=None,
         total_assertions: int = 0,
-        best_n: int = 10,
-        scaled_range: Tuple[float, float] = (0.0, 10.0),
+        best_n: Optional[int] = None,
+        scaled_range: Optional[Tuple[float, float]] = None,
     ):
         self.debug = debug
         self.solution = solution or {}
         self.executed_results = executed_results or []
         self.logger = logger
         self.total_assertions = total_assertions or 1
-        self.best_n = int(best_n)
-        self.scaled_min, self.scaled_max = float(scaled_range[0]), float(scaled_range[1])
+
+        # Optional Best-N & scaling
+        # If best_n is None or <= 0 -> disable Best-N logic
+        self.best_n = int(best_n) if best_n and int(best_n) > 0 else None
+
+        # scaling is enabled only when scaled_range is provided as a tuple (min, max)
+        if scaled_range and isinstance(scaled_range, (list, tuple)) and len(scaled_range) == 2:
+            self.scaled_range = (float(scaled_range[0]), float(scaled_range[1]))
+            self.scaled_min, self.scaled_max = float(scaled_range[0]), float(scaled_range[1])
+        else:
+            self.scaled_range = None
+            self.scaled_min = None
+            self.scaled_max = None
 
         # DataFrames
         self.df: pd.DataFrame = pd.DataFrame()
@@ -107,60 +109,71 @@ class ReportingService:
         df["score"] = df["score"].fillna(0).astype(float)
         df["percentage"] = (df["score"] / df["max_score"]) * 100
 
-        # Per-question totals per attempt
+        # Per-question totals per attempt (attempt identified by file + student + roll)
         q_totals = (
             df.groupby(["file", "student", "roll_number", "question"], dropna=False)
             .agg(q_score=("score", "sum"))
             .reset_index()
         )
 
-        # Sort for best-N picking
-        q_totals_sorted = q_totals.sort_values(
-            ["file", "student", "roll_number", "q_score"],
-            ascending=[True, True, True, False]
-        )
-
-        best_n_attempt = (
-            q_totals_sorted.groupby(["file", "student", "roll_number"], sort=False)
-            .head(self.best_n)
-            .groupby(["file", "student", "roll_number"], sort=False)
-            .agg(best_n_total=("q_score", "sum"))
-            .reset_index()
-        )
-
-        best_n_attempt["best_n_total"] = best_n_attempt["best_n_total"].fillna(0).astype(float)
-
-        # Scale mapping
-        if not best_n_attempt.empty:
-            min_raw = float(best_n_attempt["best_n_total"].min())
-            max_raw = float(best_n_attempt["best_n_total"].max())
-        else:
-            min_raw = max_raw = 0.0
-
-        if min_raw == max_raw:
-            best_n_attempt["scaled"] = self.scaled_min
-        else:
-            span = self.scaled_max - self.scaled_min
-            best_n_attempt["scaled"] = (
-                self.scaled_min + (best_n_attempt["best_n_total"] - min_raw) * span / (max_raw - min_raw)
+        # If Best-N is enabled, compute best-N totals per attempt and scaling (if enabled)
+        if self.best_n:
+            q_totals_sorted = q_totals.sort_values(
+                ["file", "student", "roll_number", "q_score"],
+                ascending=[True, True, True, False]
             )
 
+            best_n_attempt = (
+                q_totals_sorted.groupby(["file", "student", "roll_number"], sort=False)
+                .head(self.best_n)
+                .groupby(["file", "student", "roll_number"], sort=False)
+                .agg(best_n_total=("q_score", "sum"))
+                .reset_index()
+            )
+
+            best_n_attempt["best_n_total"] = best_n_attempt["best_n_total"].fillna(0).astype(float)
+
+            # Scale mapping (only if scaled_range provided)
+            if self.scaled_range and not best_n_attempt.empty:
+                min_raw = float(best_n_attempt["best_n_total"].min())
+                max_raw = float(best_n_attempt["best_n_total"].max())
+                if min_raw == max_raw:
+                    best_n_attempt["scaled"] = float(self.scaled_min)
+                else:
+                    span = self.scaled_max - self.scaled_min
+                    best_n_attempt["scaled"] = (
+                        self.scaled_min + (best_n_attempt["best_n_total"] - min_raw) * span / (max_raw - min_raw)
+                    )
+            else:
+                # scaling disabled -> set scaled to NaN (or 0 for merges)
+                best_n_attempt["scaled"] = float(0.0)
+
+        else:
+            # Best-N disabled -> empty DataFrame but with expected columns for merging
+            best_n_attempt = pd.DataFrame(columns=[
+                "file", "student", "roll_number", "best_n_total", "scaled"
+            ])
+
+        # Save attempt-level scores (used in summary)
         self.attempt_scores_df = best_n_attempt.copy()
 
         # Merge attempt-level data back into rows for rendering per-attempt
+        # Always perform merge but fill missing values sensibly
         df = df.merge(
             best_n_attempt[["file", "student", "roll_number", "best_n_total", "scaled"]],
             on=["file", "student", "roll_number"],
             how="left"
         )
 
+        # If best_n disabled, set best_n_total to 0 (or keep NaN -> we later check)
         df["best_n_total"] = df["best_n_total"].fillna(0).astype(float)
-        df["scaled"] = df["scaled"].fillna(self.scaled_min).astype(float)
+        # Scaled may be disabled; fill with 0 to avoid rendering 'nan' when not used
+        df["scaled"] = df["scaled"].fillna(0).astype(float)
 
-        # Student-level best across attempts
-        if not self.attempt_scores_df.empty:
-            idx = self.attempt_scores_df.groupby(["student", "roll_number"])["best_n_total"].idxmax()
+        # Student-level best across attempts (only meaningful when best_n is enabled)
+        if not self.attempt_scores_df.empty and self.best_n:
             try:
+                idx = self.attempt_scores_df.groupby(["student", "roll_number"])["best_n_total"].idxmax()
                 student_best = self.attempt_scores_df.loc[idx].reset_index(drop=True)
                 student_best = student_best.rename(columns={"best_n_total": "best_n_best", "scaled": "best_scaled"})
             except Exception:
@@ -185,7 +198,6 @@ class ReportingService:
     def _escape_error_html(self, err) -> str:
         """
         Safely escape and convert newlines to <br> for HTML display.
-        If err is already HTML-like, we still escape it to avoid injection.
         """
         if err is None:
             return ""
@@ -199,12 +211,52 @@ class ReportingService:
         path.parent.mkdir(parents=True, exist_ok=True)
 
         df = self.df.copy()
+        # Exclude rows that represent missing identity (keeps selects clean)
         df_summary = df[df["assertion"] != "[missing student identity]"].copy()
         grouped = df.groupby(["file", "student", "roll_number"], sort=False)
 
+        # Build a student-level summary table (used for the Summary modal)
+        # If Best-N enabled -> rely on self.student_best_df (Highest Best-N)
+        # If Best-N disabled -> compute raw total marks per student across attempts
+        if self.best_n and (not self.student_best_df.empty):
+            # use student_best_df with columns: student, roll_number, best_n_best, best_scaled
+            summary_df = self.student_best_df.copy()
+            summary_df["display_metric"] = summary_df["best_n_best"].astype(float)
+            summary_df["scaled_display"] = summary_df.get("best_scaled", 0.0).astype(float)
+            # sort ascending by Highest Best-N per user's request
+            summary_df = summary_df.sort_values("display_metric", ascending=True)
+            summary_rows = summary_df.to_dict("records")
+        else:
+            # Compute per-attempt totals correctly (not summed across attempts)
+            attempt_totals = (
+                df_summary.groupby(["file", "student", "roll_number", "question"], sort=False)
+                .agg(q_score=("score", "sum"))
+                .reset_index()
+            )
+
+            # Sum scores per attempt (file)
+            attempt_totals = (
+                attempt_totals.groupby(["file", "student", "roll_number"], sort=False)
+                .agg(total_score=("q_score", "sum"))
+                .reset_index()
+            )
+
+            # Now pick the BEST attempt per student
+            best_attempts = (
+                attempt_totals.sort_values("total_score", ascending=False)
+                .groupby(["student", "roll_number"], sort=False)
+                .head(1)
+                .reset_index(drop=True)
+            )
+
+            # For summary, use this as display_metric
+            best_attempts["display_metric"] = best_attempts["total_score"].astype(float)
+            summary_rows = best_attempts.to_dict("records")
+
+
         html_out = StringIO()
 
-        # Header, styles, scripts (full UI restored + enhancements)
+        # Header, styles, scripts
         html_out.write(
             """<!doctype html>
 <html>
@@ -294,7 +346,6 @@ class ReportingService:
 <script>
     function toggleDarkMode() {
         document.body.classList.toggle('dark');
-        // store preference (optional)
         try { localStorage.setItem('dark', document.body.classList.contains('dark')?'1':'0'); } catch(e){}
     }
     function initDarkModeFromStorage() {
@@ -366,7 +417,6 @@ class ReportingService:
     }
     window.addEventListener('DOMContentLoaded', (event) => {
         initDarkModeFromStorage();
-        // Make question headers clickable to toggle details
         document.querySelectorAll('.question-header').forEach((hdr) => {
             hdr.addEventListener('click', function(e) {
                 const qid = this.getAttribute('data-qid');
@@ -397,7 +447,7 @@ class ReportingService:
         # populate select options
         for student in sorted(df_summary["student"].dropna().unique()):
             html_out.write(f"<option value='{html_lib.escape(student)}'>{html_lib.escape(student)}</option>")
-        html_out.write("""</select>""")
+        html_out.write("</select>")
 
         html_out.write("""
     <label for="rollSelect">Roll:</label>
@@ -438,11 +488,15 @@ class ReportingService:
 
         # --- student blocks per attempt ---
         for (file, student, roll_number), g in grouped:
-            total_score = float(g["score"].sum())
+            # FIX: calculate total per attempt (per file), not accumulated across all attempts
+            total_score = float(
+                g.groupby("question", sort=False)["score"].sum().sum()
+            )
+
             total_possible = self.total_assertions
             percentage = round((total_score / total_possible) * 100, 2) if total_possible else 0.0
             best_n_val = float(g["best_n_total"].iloc[0]) if "best_n_total" in g.columns else 0.0
-            scaled_val = float(g["scaled"].iloc[0]) if "scaled" in g.columns else float(self.scaled_min)
+            scaled_val = float(g["scaled"].iloc[0]) if "scaled" in g.columns else 0.0
 
             short_file = Path(file).name if file else ""
 
@@ -456,8 +510,15 @@ class ReportingService:
             html_out.write(f"<div style='margin-left:auto; display:flex; gap:8px; align-items:center;'>")
             html_out.write(f"<div class='summary-pill'>File: {html_lib.escape(short_file)}</div>")
             html_out.write(f"<div class='summary-pill'>Total: {total_score}/{total_possible} ({percentage}%)</div>")
-            html_out.write(f"<div class='summary-pill'>Best {self.best_n}: {best_n_val}</div>")
-            html_out.write(f"<div class='summary-pill'>Scaled: {round(scaled_val,2)}</div>")
+
+            # Conditionally show Best-N and Scaled pills
+            if self.best_n:
+                html_out.write(f"<div class='summary-pill'>Best {self.best_n}: {best_n_val}</div>")
+
+            if self.scaled_range:
+                # scaled_val may be 0 if scaling disabled or not computable; show rounded
+                html_out.write(f"<div class='summary-pill'>Scaled: {round(scaled_val,2)}</div>")
+
             html_out.write("</div></div>")  # end student-meta
 
             # group per question
@@ -504,25 +565,44 @@ class ReportingService:
 <div id="overlay" onclick="closeSummary()"></div>
 <div id="summaryModal" class="summary-modal">
     <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2>Student Summary (Highest Best-N Across Attempts)</h2>
+        <h2>Student Summary</h2>
         <div><button class="btn ghost" onclick="closeSummary()">Close</button></div>
     </div>
     <div style="margin-top:12px;">
         <table style="width:100%;">
-            <thead><tr><th>Student</th><th>Roll Number</th><th>Highest Best-N</th><th>Best out of</th><th>Scaled Score</th></tr></thead>
-            <tbody>
 """)
 
-        out_of = min(self.best_n, self.total_assertions)
-        if not self.student_best_df.empty:
-            for _, row in self.student_best_df.iterrows():
-                student = html_lib.escape(str(row.get("student", "")))
-                roll = html_lib.escape(str(row.get("roll_number", "")))
-                best_n_best = float(row.get("best_n_best", 0.0))
-                best_scaled = float(row.get("best_scaled", self.scaled_min))
-                html_out.write(
-                    f"<tr><td>{student}</td><td>{roll}</td><td>{best_n_best}</td><td>{out_of}</td><td>{round(best_scaled,2)}</td></tr>"
-                )
+        # Build summary table header conditionally
+        html_out.write("<thead><tr><th>Student</th><th>Roll Number</th>")
+        if self.best_n:
+            html_out.write("<th>Highest Best-N</th><th>Best out of</th>")
+        if self.scaled_range:
+            html_out.write("<th>Scaled Score</th>")
+        if not self.best_n:
+            html_out.write("<th>Marks Obtained</th><th>Out of</th>")
+
+        html_out.write("</tr></thead><tbody>")
+
+        # Now write rows from summary_rows
+        if summary_rows:
+            for row in summary_rows:
+                student = html_lib.escape(str(row.get("student", row.get("student", ""))))
+                roll = html_lib.escape(str(row.get("roll_number", row.get("roll_number", ""))))
+                html_out.write(f"<tr><td>{student}</td><td>{roll}</td>")
+                if self.best_n:
+                    best_n_best = float(row.get("best_n_best", row.get("display_metric", 0.0)))
+                    out_of = min(self.best_n, self.total_assertions)
+                    html_out.write(f"<td>{best_n_best}</td><td>{out_of}</td>")
+                if self.scaled_range:
+                    # display scaled from either student_best_df or 0
+                    scaled_val = float(row.get("best_scaled", row.get("scaled_display", 0.0)))
+                    html_out.write(f"<td>{round(scaled_val,2)}</td>")
+                if not self.best_n:
+                    total_marks = float(row.get("display_metric", 0.0))
+                    total_possible = self.total_assertions
+                    html_out.write(f"<td>{total_marks}</td><td>{total_possible}</td>")
+
+                html_out.write("</tr>")
         else:
             html_out.write("<tr><td colspan='5'>No student summaries available.</td></tr>")
 
@@ -564,7 +644,7 @@ if __name__ == "__main__":
             "results": [
                 {"question": "Pairs", "assertion": "assert normalize_pairs(find_pairs([1,2,3,4,5],6)) == normalize_pairs([(1,5),(2,4)])", "status": "passed", "score": 1},
                 {"question": "Pairs", "assertion": "assert normalize_pairs(find_pairs([1,1,1,1],2)) == normalize_pairs([(1,1),(1,1),(1,1),(1,1),(1,1),(1,1)])", "status": "failed", "score": 0,
-                 "error": "Assertion failed.\nAssertion: assert normalize_pairs(find_pairs([1,1,1,1], 2)) == normalize_pairs([(1,1),(1,1),(1,1),(1,1),(1,1),(1,1)])\nExpected: [(1,1),(1,1),(1,1),(1,1),(1,1),(1,1)]\nActual:   [(1,1),(1,1)]\nDifference: expected 6 items, got 2 items."},
+                 "error": "Assertion failed.\nAssertion: assert normalize_pairs(find_pairs([1,1,1,1], 2)) == normalize_pairs([(1,1),(1,1),(1,1),(1,1),(1,1),(1,1)])\nExpected: 6 items\nActual:   2 items."},
             ]
         },
         {
@@ -575,7 +655,21 @@ if __name__ == "__main__":
             ]
         }
     ]
-    svc = ReportingService(executed_results=example_results, total_assertions=15, best_n=3, scaled_range=(10,20), debug=True)
-    out = Path("evaluator_report_beautified.html")
-    svc.to_html(out)
-    print(f"Wrote demo report to: {out.resolve()}")
+
+    # Example 1: totals only
+    svc1 = ReportingService(executed_results=example_results, total_assertions=15)
+    out1 = Path("evaluator_report_totals_only.html")
+    svc1.to_html(out1)
+    print(f"Wrote demo report to: {out1.resolve()}")
+
+    # Example 2: best-n but no scaling
+    svc2 = ReportingService(executed_results=example_results, total_assertions=15, best_n=3)
+    out2 = Path("evaluator_report_bestn.html")
+    svc2.to_html(out2)
+    print(f"Wrote demo report to: {out2.resolve()}")
+
+    # Example 3: best-n with scaling
+    svc3 = ReportingService(executed_results=example_results, total_assertions=15, best_n=3, scaled_range=(10, 20))
+    out3 = Path("evaluator_report_bestn_scaled.html")
+    svc3.to_html(out3)
+    print(f"Wrote demo report to: {out3.resolve()}")

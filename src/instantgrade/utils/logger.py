@@ -22,59 +22,37 @@ class ColorFormatter(logging.Formatter):
         msg = super().format(record)
         return f"{color}{msg}{self.RESET}"
 
+import logging
+from pathlib import Path
 
-def setup_logger(
-    log_dir: str | Path | None = None,
-    level: str = "normal"
-) -> logging.Logger:
-    """
-    Configure logging for the Evaluator pipeline.
+def setup_logger(level="normal", log_dir="./logs"):
+    log_dir = Path(log_dir)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "instantgrade.log"
 
-    Parameters
-    ----------
-    log_dir : str or Path or None
-        Folder path to store logs. If None, logs are not saved to file.
-    level : str, default="normal"
-        Logging verbosity level: "minimal", "normal", "verbose", "debug"
+    logger = logging.getLogger("instantgrade")
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = False
 
-    Returns
-    -------
-    logging.Logger
-    """
-    # Map string levels
-    level_map = {
-        "minimal": logging.WARNING,
-        "normal": logging.INFO,
-        "verbose": logging.DEBUG,
-        "debug": logging.DEBUG,
-    }
-    log_level = level_map.get(level.lower(), logging.INFO)
+    # prevent duplicate handlers during multiple runs
+    if not logger.handlers:
+        # console handler
+        ch = logging.StreamHandler()
+        if level == "debug":
+            ch.setLevel(logging.DEBUG)
+        elif level == "silent":
+            ch.setLevel(logging.ERROR)
+        else:
+            ch.setLevel(logging.INFO)
+        logger.addHandler(ch)
 
-    logger = logging.getLogger("Evaluator")
-    logger.setLevel(log_level)
-    logger.handlers.clear()  # avoid duplication in notebooks
-
-    # --- Console Handler (colored output) ---
-    console = logging.StreamHandler(sys.stdout)
-    console.setLevel(log_level)
-    formatter = ColorFormatter("%(asctime)s | %(levelname)-8s | %(message)s", "%H:%M:%S")
-    console.setFormatter(formatter)
-    logger.addHandler(console)
-
-    # --- File Handler (optional) ---
-    if log_dir:
-        Path(log_dir).mkdir(parents=True, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_path = Path(log_dir) / f"evaluator_{timestamp}.log"
-
-        file_handler = logging.FileHandler(log_path, encoding="utf-8")
-        file_formatter = logging.Formatter(
-            "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s", "%Y-%m-%d %H:%M:%S"
+        # file handler
+        fh = logging.FileHandler(log_file, mode="a", encoding="utf-8")
+        fh.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(levelname)s - %(message)s"
         )
-        file_handler.setFormatter(file_formatter)
-        file_handler.setLevel(log_level)
-        logger.addHandler(file_handler)
-
-        logger.info(f"File logging enabled → {log_path}")
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
 
     return logger
